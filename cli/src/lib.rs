@@ -1,10 +1,11 @@
-use crate::config::{ConfigOverride};
+use crate::config::ConfigOverride;
+use anchor_client::Cluster;
+use anyhow::Result;
 use clap::Parser;
-use anyhow::{Result};
 
 mod commands;
-mod path;
 pub mod config;
+mod path;
 
 #[derive(Parser, Debug)]
 pub struct Opts {
@@ -12,20 +13,16 @@ pub struct Opts {
     pub cfg_override: ConfigOverride,
 
     #[clap(subcommand)]
-    command: Command
+    command: Command,
 }
 
 #[derive(Debug, Parser)]
 pub enum Command {
-    Deploy {
-        #[clap(short, long, help = "The cluster URL you want to deploy to")]
-        url: Option<String>
-    }
+    Deploy { cluster: Option<Cluster> },
 }
 
 pub fn entry(opts: Opts) -> Result<()> {
     match opts.command {
-        Command::Deploy { url } => commands::deploy(&opts.cfg_override, url),
+        Command::Deploy { cluster } => commands::deploy(&opts.cfg_override, cluster),
     }
 }
-

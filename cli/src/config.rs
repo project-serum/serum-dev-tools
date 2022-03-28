@@ -1,14 +1,9 @@
-use anchor_client::Cluster;
-use clap::{Parser};
-use std::{str::FromStr};
 use anyhow::Result;
-
+use clap::Parser;
+use std::str::FromStr;
 
 #[derive(Default, Debug, Parser)]
 pub struct ConfigOverride {
-    /// Cluster override.
-    #[clap(global = true, long = "provider.cluster")]
-    pub cluster: Option<Cluster>,
     /// Wallet override.
     #[clap(global = true, long = "provider.wallet")]
     pub wallet: Option<WalletPath>,
@@ -59,17 +54,13 @@ pub struct Config {
 
 #[derive(Debug, Default)]
 pub struct ProviderConfig {
-    pub cluster: Cluster,
     pub wallet: WalletPath,
 }
 
 impl Config {
     pub fn override_config(cfg_override: &ConfigOverride) -> Result<Config> {
         let mut cfg = Config::default();
-        
-        if let Some(cluster) = cfg_override.cluster.clone() {
-            cfg.provider.cluster = cluster;
-        }
+
         if let Some(wallet) = cfg_override.wallet.clone() {
             cfg.provider.wallet = wallet;
         }

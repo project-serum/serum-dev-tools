@@ -1,5 +1,6 @@
 use std::io::Error;
 
+use anchor_client::Cluster;
 use anyhow::Result;
 use reqwest::blocking::Client;
 use serde::Deserialize;
@@ -20,10 +21,9 @@ struct ArtifactResponse {
 const REGISTRY_URL: &str = "https://anchor.projectserum.com/api/v0";
 const SERUM_DEX_ID: &str = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin";
 
-pub fn deploy(cfg_override: &ConfigOverride, url: Option<String>) -> Result<()> {
-    with_config(cfg_override, |cfg| {
-        println!("Deploying to: {}", url.unwrap());
-        println!("Cluster: {:?}", cfg.provider.cluster);
+pub fn deploy(cfg_override: &ConfigOverride, cluster: Option<Cluster>) -> Result<()> {
+    with_config(cfg_override, |_cfg| {
+        println!("Deploying to: {}", cluster.unwrap().url());
 
         let client = Client::new();
 
@@ -49,7 +49,6 @@ pub fn deploy(cfg_override: &ConfigOverride, url: Option<String>) -> Result<()> 
 
         let artifact_bytes = client.get(&artifact_path).send()?.bytes()?;
 
-        println!("Writing artifact...");
         fs::write("test.so", artifact_bytes)?;
 
         println!("Deploy Successful");
