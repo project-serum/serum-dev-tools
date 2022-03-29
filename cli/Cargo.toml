@@ -16,3 +16,4 @@ anchor-client = "0.23.0"
 dirs = "4.0.0"
 serde = { version = "1.0.136", features = ["derive"] }
 reqwest = { version = "0.11.10", features = ["blocking", "json"] }
+solana-sdk = "1.8.14"

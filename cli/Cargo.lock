@@ -2669,6 +2669,7 @@ dependencies = [
  "dirs",
  "reqwest",
  "serde",
+ "solana-sdk",
 ]
 
 [[package]]
