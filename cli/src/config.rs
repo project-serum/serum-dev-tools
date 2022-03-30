@@ -69,4 +69,12 @@ impl Config {
     }
 }
 
+pub fn with_config<R>(cfg_override: &ConfigOverride, f: impl FnOnce(&Config) -> R) -> R {
+    let cfg = Config::override_config(cfg_override).expect("failed to override config");
+
+    let r = f(&cfg);
+
+    r
+}
+
 crate::home_path!(WalletPath, ".config/solana/id.json");
