@@ -5,7 +5,9 @@ use clap::Parser;
 
 mod commands;
 pub mod config;
+mod errors;
 mod path;
+mod utils;
 
 #[derive(Parser, Debug)]
 pub struct Opts {
@@ -24,7 +26,7 @@ pub enum Command {
 
 pub fn entry(opts: Opts) -> Result<()> {
     match opts.command {
-        Command::Init => commands::init(&opts.cfg_override),
+        Command::Init => commands::init(),
         Command::Deploy { cluster } => commands::deploy(&opts.cfg_override, cluster),
     }
 }

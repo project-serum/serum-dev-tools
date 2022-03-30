@@ -4,23 +4,24 @@ use std::{
 };
 
 use anchor_client::Cluster;
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 
-use crate::config::{with_config, ConfigOverride};
+use crate::{
+    config::{with_config, ConfigOverride},
+    errors::DevToolError,
+    utils::is_initilized,
+};
 
 pub fn deploy(cfg_override: &ConfigOverride, cluster: Option<Cluster>) -> Result<()> {
     with_config(cfg_override, |cfg| {
+        if !is_initilized() {
+            return Err(DevToolError::NotInitialized.into());
+        }
+
         let cluster = cluster.unwrap();
         let cluster_url = cluster.url();
 
         let provider_keypair = cfg.provider.wallet.to_string();
-
-        // If ./dev-tools does NOT exist
-        if !Path::exists(Path::new("./dev-tools")) {
-            return Err(anyhow!(
-                "./dev-tools does not exist. Please run serum-dev-tools init first."
-            ));
-        }
 
         let program_keypair_path = Path::new("./dev-tools/serum-dex-dev.json");
         let program_artifact_path = Path::new("./dev-tools/serum-dex.so");
