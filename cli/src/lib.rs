@@ -21,12 +21,14 @@ pub struct Opts {
 #[derive(Debug, Parser)]
 pub enum Command {
     Init,
+    Instance,
     Deploy { cluster: Option<Cluster> },
 }
 
 pub fn entry(opts: Opts) -> Result<()> {
     match opts.command {
         Command::Init => commands::init(),
+        Command::Instance => commands::instance(),
         Command::Deploy { cluster } => commands::deploy(&opts.cfg_override, cluster),
     }
 }

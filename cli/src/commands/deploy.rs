@@ -9,12 +9,12 @@ use anyhow::Result;
 use crate::{
     config::{with_config, ConfigOverride},
     errors::DevToolError,
-    utils::is_initilized,
+    utils::is_initialized,
 };
 
 pub fn deploy(cfg_override: &ConfigOverride, cluster: Option<Cluster>) -> Result<()> {
     with_config(cfg_override, |cfg| {
-        if !is_initilized() {
+        if !is_initialized() {
             return Err(DevToolError::NotInitialized.into());
         }
 
