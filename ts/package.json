@@ -1,0 +1,24 @@
+{
+  "name": "serum-dev-tools",
+  "version": "1.0.0",
+  "description": "developer tooling suite for building on serum",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "author": "Sayantan Karmakar",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rm -rf dist/; tsc",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@types/jest": "^27.4.1",
+    "jest": "^27.5.1",
+    "ts-jest": "^27.1.4",
+    "ts-jest-resolver": "^2.0.0",
+    "typescript": "^4.6.3"
+  }
+}
