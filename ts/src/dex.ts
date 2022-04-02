@@ -1,5 +1,4 @@
 import { PublicKey } from "@solana/web3.js";
-
 export class Dex {
   public address: PublicKey;
 
@@ -8,7 +7,7 @@ export class Dex {
   }
 
   public hello_world(x: number): string {
-    var c = x + 10;
+    const c = x + 10;
     return `hello ${c}`;
   }
 }
