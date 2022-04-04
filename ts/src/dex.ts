@@ -1,13 +1,45 @@
-import { PublicKey } from "@solana/web3.js";
+import { createMint } from "@solana/spl-token";
+import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { Coin } from "./coin";
 export class Dex {
   public address: PublicKey;
 
-  constructor(address: PublicKey) {
+  public coins: Coin[];
+
+  connection: Connection;
+
+  constructor(address: PublicKey, connection: Connection) {
     this.address = address;
+    this.connection = connection;
+    this.coins = [];
   }
 
-  public hello_world(x: number): string {
-    const c = x + 10;
-    return `hello ${c}`;
+  public createCoin = async (
+    symbol: string,
+    decimals: number,
+    payer: Keypair,
+    mintAuthority: PublicKey | null,
+    freezeAuthority: PublicKey | null,
+  ): Promise<PublicKey> => {
+    const mint = await createMint(
+      this.connection,
+      payer,
+      mintAuthority,
+      freezeAuthority,
+      decimals,
+    );
+    this.coins.push({
+      symbol,
+      decimals,
+      mint,
+    });
+
+    return mint;
+  };
+
+  public getCoin(symbol: string): Coin | null {
+    const coin = this.coins.find((coin) => coin.symbol === symbol);
+
+    return coin ? coin : null;
   }
 }
