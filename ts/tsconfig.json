@@ -4,7 +4,6 @@
     "target": "es2015",
     "declaration": true,
     "outDir": "./dist",
-    "rootDir": "./src",
     "types": ["jest"]
   },
   "include": ["src/**/*", "**/*.spec.ts", "**/*.test.ts"]

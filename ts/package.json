@@ -37,6 +37,7 @@
     "typescript": "^4.6.3"
   },
   "dependencies": {
+    "@project-serum/serum": "^0.13.62",
     "@solana/spl-token": "^0.2.0",
     "@solana/web3.js": "^1.37.0"
   }

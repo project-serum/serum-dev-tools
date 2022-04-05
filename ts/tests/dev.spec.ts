@@ -4,14 +4,14 @@ import {
   LAMPORTS_PER_SOL,
   PublicKey,
 } from "@solana/web3.js";
-import { Dex } from "../src/dex";
+import { Dex } from "../src";
 
 describe("Serum Dev Tools", () => {
   const connection = new Connection("http://localhost:8899", "confirmed");
   const owner = Keypair.generate();
 
   const dexAddress = new PublicKey(
-    "8mdYjA9qo2qN5s8TF7gQvkFtijjxBtcYw6vCiPuyeNq7",
+    "DgmqKqyWmgDeqWiVWKcfFqM8QMQ1gCJaJBcw8i8LX9SF",
   );
 
   const dex = new Dex(dexAddress, connection);
@@ -32,5 +32,22 @@ describe("Serum Dev Tools", () => {
     expect(coin.symbol).toBe("SAYA");
     expect(coin.decimals).toBe(6);
     expect(coin.mint).toBe(mint);
+  });
+
+  it("can create dex accounts", async () => {
+    const market = Keypair.generate();
+    const requestQueue = Keypair.generate();
+    const eventQueue = Keypair.generate();
+    const bids = Keypair.generate();
+    const asks = Keypair.generate();
+
+    const sig = await Dex.createAccounts(
+      { market, requestQueue, eventQueue, bids, asks },
+      owner,
+      connection,
+      dexAddress,
+    );
+
+    expect(sig).toBeTruthy();
   });
 });
