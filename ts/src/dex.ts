@@ -84,9 +84,13 @@ export class Dex {
       newAccountPubkey: requestQueue.publicKey,
       fromPubkey: payer.publicKey,
       space:
-        REQUEST_QUEUE_LAYOUT.HEADER.span + REQUEST_QUEUE_LAYOUT.NODE.span + 7,
+        REQUEST_QUEUE_LAYOUT.HEADER.span +
+        20 * REQUEST_QUEUE_LAYOUT.NODE.span +
+        7, // + 7 for the tail padding
       lamports: await connection.getMinimumBalanceForRentExemption(
-        REQUEST_QUEUE_LAYOUT.HEADER.span + REQUEST_QUEUE_LAYOUT.NODE.span + 7,
+        REQUEST_QUEUE_LAYOUT.HEADER.span +
+          20 * REQUEST_QUEUE_LAYOUT.NODE.span +
+          7,
       ),
       programId: dexProgram,
     });
@@ -94,9 +98,10 @@ export class Dex {
     const eventQueueIx = SystemProgram.createAccount({
       newAccountPubkey: eventQueue.publicKey,
       fromPubkey: payer.publicKey,
-      space: EVENT_QUEUE_LAYOUT.HEADER.span + EVENT_QUEUE_LAYOUT.NODE.span + 7,
+      space:
+        EVENT_QUEUE_LAYOUT.HEADER.span + 20 * EVENT_QUEUE_LAYOUT.NODE.span + 7, // + 7 for the tail padding
       lamports: await connection.getMinimumBalanceForRentExemption(
-        EVENT_QUEUE_LAYOUT.HEADER.span + EVENT_QUEUE_LAYOUT.NODE.span + 7,
+        EVENT_QUEUE_LAYOUT.HEADER.span + 20 * EVENT_QUEUE_LAYOUT.NODE.span + 7,
       ),
       programId: dexProgram,
     });
