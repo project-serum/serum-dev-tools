@@ -138,12 +138,12 @@ export class Dex {
     const tx = new Transaction().add(...accountsIx, initSerumMarketIx);
 
     const txSig = await sendAndConfirmTransaction(this.connection, tx, [
+      payer,
       marketAccounts.market,
       marketAccounts.requestQueue,
       marketAccounts.eventQueue,
       marketAccounts.bids,
       marketAccounts.asks,
-      payer,
     ]);
 
     await this.connection.confirmTransaction(txSig, "confirmed");
