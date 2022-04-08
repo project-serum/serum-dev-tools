@@ -1,5 +1,4 @@
 import {
-  clusterApiUrl,
   Connection,
   Keypair,
   LAMPORTS_PER_SOL,
@@ -10,7 +9,7 @@ import { assert } from "chai";
 import { Dex } from "../src";
 
 describe("Serum Dev Tools", () => {
-  const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+  const connection = new Connection("http://localhost:8899", "confirmed");
   const owner = Keypair.generate();
 
   const dexAddress = new PublicKey(
