@@ -11,7 +11,7 @@ describe("Serum Dev Tools", () => {
   const owner = Keypair.generate();
 
   const dexAddress = new PublicKey(
-    "DgmqKqyWmgDeqWiVWKcfFqM8QMQ1gCJaJBcw8i8LX9SF",
+    "7zo7HCQAZPRb4pYiQQ6fLjC8ssN3E8LkavVs8JUA5NMn",
   );
 
   const dex = new Dex(dexAddress, connection);
