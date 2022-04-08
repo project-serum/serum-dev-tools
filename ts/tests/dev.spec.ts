@@ -4,14 +4,14 @@ import {
   LAMPORTS_PER_SOL,
   PublicKey,
 } from "@solana/web3.js";
-import { Dex } from "../src";
+import { Dex, DexMarket } from "../src";
 
 describe("Serum Dev Tools", () => {
   const connection = new Connection("http://localhost:8899", "confirmed");
   const owner = Keypair.generate();
 
   const dexAddress = new PublicKey(
-    "DgmqKqyWmgDeqWiVWKcfFqM8QMQ1gCJaJBcw8i8LX9SF",
+    "9nLpw97GE7mPk5eqUoPfkUYvwtAXbgAoh1H5Ec8miGwM",
   );
 
   const dex = new Dex(dexAddress, connection);
@@ -19,7 +19,7 @@ describe("Serum Dev Tools", () => {
   beforeAll(async () => {
     const tx = await connection.requestAirdrop(
       owner.publicKey,
-      5 * LAMPORTS_PER_SOL,
+      20 * LAMPORTS_PER_SOL,
     );
     await connection.confirmTransaction(tx);
   });
@@ -41,13 +41,29 @@ describe("Serum Dev Tools", () => {
     const bids = Keypair.generate();
     const asks = Keypair.generate();
 
-    const sig = await Dex.createAccounts(
+    await DexMarket.createMarketAccounts(
       { market, requestQueue, eventQueue, bids, asks },
       owner,
       connection,
       dexAddress,
     );
 
-    expect(sig).toBeTruthy();
+    await dex.createCoin("SRM", 6, owner, owner.publicKey, null);
+
+    const dexMarket = await dex.initDexMarket(
+      dex.getCoin("SAYA"),
+      dex.getCoin("SRM"),
+      {
+        baseLotSize: 10,
+        quoteLotSize: 10,
+        feeRate: 10,
+        quoteDustThreshold: 10,
+      },
+      owner,
+    );
+
+    expect(dexMarket.address.toBase58()).toBe(
+      dexMarket.serumMarket.address.toBase58(),
+    );
   });
 });
