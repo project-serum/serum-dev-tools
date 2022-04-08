@@ -1,25 +1,12 @@
-import { createMint } from "@solana/spl-token";
+import {
+  createMint,
+  getOrCreateAssociatedTokenAccount,
+} from "@solana/spl-token";
 import { Coin } from "./coin";
-import {
-  EVENT_QUEUE_LAYOUT,
-  MARKET_STATE_LAYOUT_V3,
-  REQUEST_QUEUE_LAYOUT,
-} from "@project-serum/serum";
-import {
-  Connection,
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  Transaction,
-} from "@solana/web3.js";
+import { Connection, Keypair, PublicKey, Transaction } from "@solana/web3.js";
+import { DexMarket, MarketAccounts } from "./market";
+import { DexInstructions, Market as SerumMarket } from "@project-serum/serum";
 
-interface DexAccounts {
-  market: Keypair;
-  requestQueue: Keypair;
-  eventQueue: Keypair;
-  bids: Keypair;
-  asks: Keypair;
-}
 export class Dex {
   public address: PublicKey;
 
@@ -62,80 +49,85 @@ export class Dex {
     return coin ? coin : null;
   }
 
-  static async createAccounts(
-    accounts: DexAccounts,
+  public async initDexMarket(
+    baseCoin: Coin,
+    quoteCoin: Coin,
+    marketOptions: {
+      baseLotSize: number;
+      quoteLotSize: number;
+      feeRate: number;
+      quoteDustThreshold: number;
+    },
     payer: Keypair,
-    connection: Connection,
-    dexProgram: PublicKey,
-  ): Promise<string> {
-    const { market, requestQueue, eventQueue } = accounts;
+  ): Promise<DexMarket> {
+    const marketAccounts: MarketAccounts = {
+      market: Keypair.generate(),
+      requestQueue: Keypair.generate(),
+      eventQueue: Keypair.generate(),
+      bids: Keypair.generate(),
+      asks: Keypair.generate(),
+    };
 
-    const marketIx = SystemProgram.createAccount({
-      newAccountPubkey: market.publicKey,
-      fromPubkey: payer.publicKey,
-      space: MARKET_STATE_LAYOUT_V3.span,
-      lamports: await connection.getMinimumBalanceForRentExemption(
-        MARKET_STATE_LAYOUT_V3.span,
-      ),
-      programId: dexProgram,
-    });
-
-    const requestQueueIx = SystemProgram.createAccount({
-      newAccountPubkey: requestQueue.publicKey,
-      fromPubkey: payer.publicKey,
-      space:
-        REQUEST_QUEUE_LAYOUT.HEADER.span +
-        20 * REQUEST_QUEUE_LAYOUT.NODE.span +
-        7, // + 7 for the tail padding
-      lamports: await connection.getMinimumBalanceForRentExemption(
-        REQUEST_QUEUE_LAYOUT.HEADER.span +
-          20 * REQUEST_QUEUE_LAYOUT.NODE.span +
-          7,
-      ),
-      programId: dexProgram,
-    });
-
-    const eventQueueIx = SystemProgram.createAccount({
-      newAccountPubkey: eventQueue.publicKey,
-      fromPubkey: payer.publicKey,
-      space:
-        EVENT_QUEUE_LAYOUT.HEADER.span + 20 * EVENT_QUEUE_LAYOUT.NODE.span + 7, // + 7 for the tail padding
-      lamports: await connection.getMinimumBalanceForRentExemption(
-        EVENT_QUEUE_LAYOUT.HEADER.span + 20 * EVENT_QUEUE_LAYOUT.NODE.span + 7,
-      ),
-      programId: dexProgram,
-    });
-
-    // const bidsIx = SystemProgram.createAccount({
-    //   newAccountPubkey: bids.publicKey,
-    //   fromPubkey: payer.publicKey,
-    //   space: ORDERBOOK_LAYOUT.span,
-    //   lamports: await connection.getMinimumBalanceForRentExemption(
-    //     ORDERBOOK_LAYOUT.span, // returns -1,
-    //   ),
-    //   programId: dexProgram,
-    // });
-
-    // const asksIx = SystemProgram.createAccount({
-    //   newAccountPubkey: asks.publicKey,
-    //   fromPubkey: payer.publicKey,
-    //   space: ORDERBOOK_LAYOUT.span,
-    //   lamports: await connection.getMinimumBalanceForRentExemption(
-    //     ORDERBOOK_LAYOUT.span, // returns -1
-    //   ),
-    //   programId: dexProgram,
-    // });
-
-    const tx = new Transaction();
-    tx.add(marketIx, requestQueueIx, eventQueueIx);
-
-    const txSig = await connection.sendTransaction(tx, [
+    await DexMarket.createMarketAccounts(
+      marketAccounts,
       payer,
-      market,
-      requestQueue,
-      eventQueue,
-    ]);
+      this.connection,
+      this.address,
+    );
 
-    return txSig;
+    const [vaultOwner, vaultOwnerNonce] = await PublicKey.findProgramAddress(
+      [this.address.toBuffer()],
+      this.address,
+    );
+
+    // https://github.com/solana-labs/solana-program-library/blob/master/token/js/src/actions/getOrCreateAssociatedTokenAccount.ts
+    const baseVault = await getOrCreateAssociatedTokenAccount(
+      this.connection,
+      payer,
+      baseCoin.mint,
+      vaultOwner, // PDA derived from dex programID is vault owner
+      true,
+    );
+
+    const quoteVault = await getOrCreateAssociatedTokenAccount(
+      this.connection,
+      payer,
+      quoteCoin.mint,
+      this.address, // PDA derived from dex programID is vault owner
+      true,
+    );
+
+    const initSerumMarketIx = await DexInstructions.initializeMarket({
+      market: marketAccounts.market.publicKey,
+      requestQueue: marketAccounts.requestQueue.publicKey,
+      eventQueue: marketAccounts.eventQueue.publicKey,
+      bids: marketAccounts.bids.publicKey,
+      asks: marketAccounts.asks.publicKey,
+      baseVault: baseVault.address,
+      quoteVault: quoteVault.address,
+      baseMint: baseCoin.mint,
+      quoteMint: quoteCoin.mint,
+      baseLotSize: marketOptions.baseLotSize,
+      quoteLotSize: marketOptions.quoteLotSize,
+      feeRateBps: marketOptions.feeRate,
+      quoteDustThreshold: marketOptions.quoteDustThreshold,
+      vaultSignerNonce: vaultOwnerNonce,
+      programId: this.address,
+    });
+
+    const tx = new Transaction().add(initSerumMarketIx);
+
+    const txSig = await this.connection.sendTransaction(tx, []);
+
+    await this.connection.confirmTransaction(txSig, "confirmed");
+
+    const serumMarket = await SerumMarket.load(
+      this.connection,
+      marketAccounts.market.publicKey,
+      { commitment: "confirmed" },
+      this.address,
+    );
+
+    return new DexMarket(marketAccounts, serumMarket, baseCoin, quoteCoin);
   }
 }
