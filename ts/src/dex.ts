@@ -3,14 +3,30 @@ import {
   getOrCreateAssociatedTokenAccount,
 } from "@solana/spl-token";
 import { Coin } from "./coin";
-import { Connection, Keypair, PublicKey, Transaction } from "@solana/web3.js";
+import BN from "bn.js";
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  sendAndConfirmTransaction,
+  Transaction,
+} from "@solana/web3.js";
 import { DexMarket, MarketAccounts } from "./market";
 import { DexInstructions, Market as SerumMarket } from "@project-serum/serum";
+import { getVaultOwnerAndNonce } from "./utils";
 
+export type MarketArgs = {
+  tickSize: number;
+  lotSize: number;
+  feeRate: number;
+  quoteDustThreshold: BN;
+};
 export class Dex {
   public address: PublicKey;
 
   coins: Coin[];
+
+  markets: DexMarket[];
 
   connection: Connection;
 
@@ -52,12 +68,7 @@ export class Dex {
   public async initDexMarket(
     baseCoin: Coin,
     quoteCoin: Coin,
-    marketOptions: {
-      baseLotSize: number;
-      quoteLotSize: number;
-      feeRate: number;
-      quoteDustThreshold: number;
-    },
+    marketArgs: MarketArgs,
     payer: Keypair,
   ): Promise<DexMarket> {
     const marketAccounts: MarketAccounts = {
@@ -68,15 +79,8 @@ export class Dex {
       asks: Keypair.generate(),
     };
 
-    await DexMarket.createMarketAccounts(
-      marketAccounts,
-      payer,
-      this.connection,
-      this.address,
-    );
-
-    const [vaultOwner, vaultOwnerNonce] = await PublicKey.findProgramAddress(
-      [this.address.toBuffer()],
+    const [vaultOwner, vaultOwnerNonce] = await getVaultOwnerAndNonce(
+      marketAccounts.market.publicKey,
       this.address,
     );
 
@@ -97,6 +101,22 @@ export class Dex {
       true,
     );
 
+    const accountsIx = await DexMarket.createMarketAccountsInstructions(
+      marketAccounts,
+      payer,
+      this.connection,
+      this.address,
+    );
+
+    let baseLotSize;
+    let quoteLotSize;
+    if (marketArgs.lotSize > 0) {
+      baseLotSize = Math.round(10 ** baseCoin.decimals * marketArgs.lotSize);
+      quoteLotSize = Math.round(
+        marketArgs.lotSize * 10 ** quoteCoin.decimals * marketArgs.tickSize,
+      );
+    }
+
     const initSerumMarketIx = await DexInstructions.initializeMarket({
       market: marketAccounts.market.publicKey,
       requestQueue: marketAccounts.requestQueue.publicKey,
@@ -107,17 +127,24 @@ export class Dex {
       quoteVault: quoteVault.address,
       baseMint: baseCoin.mint,
       quoteMint: quoteCoin.mint,
-      baseLotSize: marketOptions.baseLotSize,
-      quoteLotSize: marketOptions.quoteLotSize,
-      feeRateBps: marketOptions.feeRate,
-      quoteDustThreshold: marketOptions.quoteDustThreshold,
+      baseLotSize: new BN(baseLotSize),
+      quoteLotSize: new BN(quoteLotSize),
+      feeRateBps: marketArgs.feeRate,
+      quoteDustThreshold: marketArgs.quoteDustThreshold,
       vaultSignerNonce: vaultOwnerNonce,
       programId: this.address,
     });
 
-    const tx = new Transaction().add(initSerumMarketIx);
+    const tx = new Transaction().add(...accountsIx, initSerumMarketIx);
 
-    const txSig = await this.connection.sendTransaction(tx, []);
+    const txSig = await sendAndConfirmTransaction(this.connection, tx, [
+      marketAccounts.market,
+      marketAccounts.requestQueue,
+      marketAccounts.eventQueue,
+      marketAccounts.bids,
+      marketAccounts.asks,
+      payer,
+    ]);
 
     await this.connection.confirmTransaction(txSig, "confirmed");
 

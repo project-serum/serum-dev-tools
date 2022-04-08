@@ -2,9 +2,13 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "es2015",
+    "lib": ["es2015"],
     "declaration": true,
     "outDir": "./dist",
-    "types": ["jest"]
+    "typeRoots": ["./node_modules/@types"],
+    "types": ["mocha", "chai"],
+    // for BN constructor
+    "esModuleInterop": true
   },
   "include": ["src/**/*", "**/*.spec.ts", "**/*.test.ts"]
 }

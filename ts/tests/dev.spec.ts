@@ -1,13 +1,16 @@
 import {
+  clusterApiUrl,
   Connection,
   Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
 } from "@solana/web3.js";
-import { Dex, DexMarket } from "../src";
+import BN from "bn.js";
+import { assert } from "chai";
+import { Dex } from "../src";
 
 describe("Serum Dev Tools", () => {
-  const connection = new Connection("http://localhost:8899", "confirmed");
+  const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
   const owner = Keypair.generate();
 
   const dexAddress = new PublicKey(
@@ -16,12 +19,14 @@ describe("Serum Dev Tools", () => {
 
   const dex = new Dex(dexAddress, connection);
 
-  beforeAll(async () => {
-    const tx = await connection.requestAirdrop(
+  before(async () => {
+    const sig = await connection.requestAirdrop(
       owner.publicKey,
       20 * LAMPORTS_PER_SOL,
     );
-    await connection.confirmTransaction(tx);
+    await connection.confirmTransaction(sig);
+
+    console.log(await connection.getBalance(owner.publicKey, "confirmed"));
   });
 
   it("can create coin", async () => {
@@ -29,40 +34,26 @@ describe("Serum Dev Tools", () => {
 
     const coin = dex.getCoin("SAYA");
 
-    expect(coin.symbol).toBe("SAYA");
-    expect(coin.decimals).toBe(6);
-    expect(coin.mint).toBe(mint);
+    assert.equal(coin.mint, mint);
   });
 
   it("can create dex accounts", async () => {
-    const market = Keypair.generate();
-    const requestQueue = Keypair.generate();
-    const eventQueue = Keypair.generate();
-    const bids = Keypair.generate();
-    const asks = Keypair.generate();
-
-    await DexMarket.createMarketAccounts(
-      { market, requestQueue, eventQueue, bids, asks },
-      owner,
-      connection,
-      dexAddress,
-    );
-
     await dex.createCoin("SRM", 6, owner, owner.publicKey, null);
 
     const dexMarket = await dex.initDexMarket(
       dex.getCoin("SAYA"),
       dex.getCoin("SRM"),
       {
-        baseLotSize: 10,
-        quoteLotSize: 10,
+        tickSize: 0.001,
+        lotSize: 10,
         feeRate: 10,
-        quoteDustThreshold: 10,
+        quoteDustThreshold: new BN(100),
       },
       owner,
     );
 
-    expect(dexMarket.address.toBase58()).toBe(
+    assert.equal(
+      dexMarket.address.toBase58(),
       dexMarket.serumMarket.address.toBase58(),
     );
   });

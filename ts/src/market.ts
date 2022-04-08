@@ -4,7 +4,7 @@ import {
   Keypair,
   PublicKey,
   SystemProgram,
-  Transaction,
+  TransactionInstruction,
 } from "@solana/web3.js";
 import { Coin } from "./coin";
 
@@ -32,6 +32,8 @@ export class DexMarket {
 
   public quoteCoin: Coin;
 
+  public marketSymbol: string;
+
   constructor(
     marketAccounts: MarketAccounts,
     serumMarket: Market,
@@ -43,14 +45,15 @@ export class DexMarket {
     this.marketAccounts = marketAccounts;
     this.baseCoin = baseCoin;
     this.quoteCoin = quoteCoin;
+    this.marketSymbol = `${baseCoin.symbol}/${quoteCoin.symbol}`;
   }
 
-  static async createMarketAccounts(
+  static async createMarketAccountsInstructions(
     accounts: MarketAccounts,
     payer: Keypair,
     connection: Connection,
     dexProgram: PublicKey,
-  ): Promise<void> {
+  ): Promise<TransactionInstruction[]> {
     const { market, requestQueue, eventQueue, bids, asks } = accounts;
 
     const marketIx = SystemProgram.createAccount({
@@ -99,18 +102,6 @@ export class DexMarket {
       programId: dexProgram,
     });
 
-    const tx = new Transaction();
-    tx.add(marketIx, requestQueueIx, eventQueueIx, bidsIx, asksIx);
-
-    const txSig = await connection.sendTransaction(tx, [
-      payer,
-      market,
-      requestQueue,
-      eventQueue,
-      bids,
-      asks,
-    ]);
-
-    await connection.confirmTransaction(txSig, "confirmed");
+    return [marketIx, requestQueueIx, eventQueueIx, bidsIx, asksIx];
   }
 }
