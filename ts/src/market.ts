@@ -1,9 +1,14 @@
-import { Market, MARKET_STATE_LAYOUT_V3 } from "@project-serum/serum";
+import { Market } from "@project-serum/serum";
+import {
+  createInitializeAccountInstruction,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import {
   Connection,
   Keypair,
   PublicKey,
   SystemProgram,
+  Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
 import { Coin } from "./coin";
@@ -48,6 +53,49 @@ export class DexMarket {
     this.marketSymbol = `${baseCoin.symbol}/${quoteCoin.symbol}`;
   }
 
+  static async createMarketVaultsTransaction(
+    payer: Keypair,
+    vaultOwner: PublicKey,
+    baseVault: Keypair,
+    quoteVault: Keypair,
+    baseCoin: Coin,
+    quoteCoin: Coin,
+    connection: Connection,
+  ): Promise<Transaction> {
+    const tx = new Transaction();
+
+    tx.add(
+      SystemProgram.createAccount({
+        fromPubkey: payer.publicKey,
+        newAccountPubkey: baseVault.publicKey,
+        lamports: await connection.getMinimumBalanceForRentExemption(165),
+        space: 165,
+        programId: TOKEN_PROGRAM_ID,
+      }),
+      SystemProgram.createAccount({
+        fromPubkey: payer.publicKey,
+        newAccountPubkey: quoteVault.publicKey,
+        lamports: await connection.getMinimumBalanceForRentExemption(165),
+        space: 165,
+        programId: TOKEN_PROGRAM_ID,
+      }),
+      createInitializeAccountInstruction(
+        baseVault.publicKey,
+        baseCoin.mint,
+        vaultOwner,
+        TOKEN_PROGRAM_ID,
+      ),
+      createInitializeAccountInstruction(
+        quoteVault.publicKey,
+        quoteCoin.mint,
+        vaultOwner,
+        TOKEN_PROGRAM_ID,
+      ),
+    );
+
+    return tx;
+  }
+
   static async createMarketAccountsInstructions(
     accounts: MarketAccounts,
     payer: Keypair,
@@ -59,9 +107,9 @@ export class DexMarket {
     const marketIx = SystemProgram.createAccount({
       newAccountPubkey: market.publicKey,
       fromPubkey: payer.publicKey,
-      space: MARKET_STATE_LAYOUT_V3.span,
+      space: Market.getLayout(dexProgram).span,
       lamports: await connection.getMinimumBalanceForRentExemption(
-        MARKET_STATE_LAYOUT_V3.span,
+        Market.getLayout(dexProgram).span,
       ),
       programId: dexProgram,
     });

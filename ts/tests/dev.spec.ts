@@ -29,17 +29,17 @@ describe("Serum Dev Tools", () => {
   });
 
   it("can create coin", async () => {
-    const mint = await dex.createCoin("SAYA", 6, owner, owner.publicKey, null);
+    const coin = await dex.createCoin("SAYA", 6, owner, owner.publicKey, null);
 
-    const coin = dex.getCoin("SAYA");
-
-    assert.equal(coin.mint, mint);
+    assert.equal(coin.decimals, 6);
+    assert.equal(coin.symbol, "SAYA");
   });
 
   it("can create dex accounts", async () => {
     await dex.createCoin("SRM", 6, owner, owner.publicKey, null);
 
     const dexMarket = await dex.initDexMarket(
+      owner,
       dex.getCoin("SAYA"),
       dex.getCoin("SRM"),
       {
@@ -48,7 +48,6 @@ describe("Serum Dev Tools", () => {
         feeRate: 10,
         quoteDustThreshold: new BN(100),
       },
-      owner,
     );
 
     assert.equal(

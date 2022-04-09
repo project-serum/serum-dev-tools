@@ -1,8 +1,4 @@
-import {
-  createMint,
-  getOrCreateAssociatedTokenAccount,
-} from "@solana/spl-token";
-import { Coin } from "./coin";
+import { createMint } from "@solana/spl-token";
 import BN from "bn.js";
 import {
   Connection,
@@ -14,6 +10,7 @@ import {
 import { DexMarket, MarketAccounts } from "./market";
 import { DexInstructions, Market as SerumMarket } from "@project-serum/serum";
 import { getVaultOwnerAndNonce } from "./utils";
+import { Coin } from "./coin";
 
 export type MarketArgs = {
   tickSize: number;
@@ -34,6 +31,7 @@ export class Dex {
     this.address = address;
     this.connection = connection;
     this.coins = [];
+    this.markets = [];
   }
 
   public createCoin = async (
@@ -42,7 +40,7 @@ export class Dex {
     payer: Keypair,
     mintAuthority: PublicKey | null,
     freezeAuthority: PublicKey | null,
-  ): Promise<PublicKey> => {
+  ): Promise<Coin> => {
     const mint = await createMint(
       this.connection,
       payer,
@@ -50,13 +48,16 @@ export class Dex {
       freezeAuthority,
       decimals,
     );
-    this.coins.push({
-      symbol,
-      decimals,
-      mint,
-    });
 
-    return mint;
+    const coin: Coin = {
+      mint,
+      decimals,
+      symbol,
+    };
+
+    this.coins.push(coin);
+
+    return coin;
   };
 
   public getCoin(symbol: string): Coin | null {
@@ -65,12 +66,25 @@ export class Dex {
     return coin ? coin : null;
   }
 
+  public getMarket(baseCoin: Coin, quoteCoin: Coin): DexMarket | null {
+    const dexMarket = this.markets.find(
+      (market) =>
+        market.baseCoin === baseCoin && market.quoteCoin === quoteCoin,
+    );
+
+    return dexMarket ? dexMarket : null;
+  }
+
   public async initDexMarket(
+    payer: Keypair,
     baseCoin: Coin,
     quoteCoin: Coin,
     marketArgs: MarketArgs,
-    payer: Keypair,
   ): Promise<DexMarket> {
+    if (this.getMarket(baseCoin, quoteCoin) != null) {
+      throw new Error("Market already exists");
+    }
+
     const marketAccounts: MarketAccounts = {
       market: Keypair.generate(),
       requestQueue: Keypair.generate(),
@@ -84,29 +98,24 @@ export class Dex {
       this.address,
     );
 
-    // https://github.com/solana-labs/solana-program-library/blob/master/token/js/src/actions/getOrCreateAssociatedTokenAccount.ts
-    const baseVault = await getOrCreateAssociatedTokenAccount(
-      this.connection,
-      payer,
-      baseCoin.mint,
-      vaultOwner, // PDA derived from dex programID is vault owner
-      true,
-    );
+    const baseVault = Keypair.generate();
+    const quoteVault = Keypair.generate();
 
-    const quoteVault = await getOrCreateAssociatedTokenAccount(
-      this.connection,
+    const vaultTx = await DexMarket.createMarketVaultsTransaction(
       payer,
-      quoteCoin.mint,
-      this.address, // PDA derived from dex programID is vault owner
-      true,
-    );
-
-    const accountsIx = await DexMarket.createMarketAccountsInstructions(
-      marketAccounts,
-      payer,
+      vaultOwner,
+      baseVault,
+      quoteVault,
+      baseCoin,
+      quoteCoin,
       this.connection,
-      this.address,
     );
+    const vaultSig = await this.connection.sendTransaction(vaultTx, [
+      payer,
+      baseVault,
+      quoteVault,
+    ]);
+    await this.connection.confirmTransaction(vaultSig);
 
     let baseLotSize;
     let quoteLotSize;
@@ -117,14 +126,21 @@ export class Dex {
       );
     }
 
+    const accountsIx = await DexMarket.createMarketAccountsInstructions(
+      marketAccounts,
+      payer,
+      this.connection,
+      this.address,
+    );
+
     const initSerumMarketIx = await DexInstructions.initializeMarket({
       market: marketAccounts.market.publicKey,
       requestQueue: marketAccounts.requestQueue.publicKey,
       eventQueue: marketAccounts.eventQueue.publicKey,
       bids: marketAccounts.bids.publicKey,
       asks: marketAccounts.asks.publicKey,
-      baseVault: baseVault.address,
-      quoteVault: quoteVault.address,
+      baseVault: baseVault.publicKey,
+      quoteVault: quoteVault.publicKey,
       baseMint: baseCoin.mint,
       quoteMint: quoteCoin.mint,
       baseLotSize: new BN(baseLotSize),
@@ -155,6 +171,15 @@ export class Dex {
       this.address,
     );
 
-    return new DexMarket(marketAccounts, serumMarket, baseCoin, quoteCoin);
+    const dexMarket = new DexMarket(
+      marketAccounts,
+      serumMarket,
+      baseCoin,
+      quoteCoin,
+    );
+
+    this.markets.push(dexMarket);
+
+    return dexMarket;
   }
 }
