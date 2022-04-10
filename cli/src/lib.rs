@@ -22,13 +22,20 @@ pub struct Opts {
 pub enum Command {
     Init,
     Instance,
-    Deploy { cluster: Option<Cluster> },
+    Deploy {
+        cluster: Option<Cluster>,
+
+        #[clap(long)]
+        script: Option<String>,
+    },
 }
 
 pub fn entry(opts: Opts) -> Result<()> {
     match opts.command {
         Command::Init => commands::init(),
         Command::Instance => commands::instance(),
-        Command::Deploy { cluster } => commands::deploy(&opts.cfg_override, cluster),
+        Command::Deploy { cluster, script } => {
+            commands::deploy(&opts.cfg_override, cluster, script)
+        }
     }
 }

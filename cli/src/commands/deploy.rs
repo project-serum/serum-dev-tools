@@ -12,7 +12,11 @@ use crate::{
     utils::is_initialized,
 };
 
-pub fn deploy(cfg_override: &ConfigOverride, cluster: Option<Cluster>) -> Result<()> {
+pub fn deploy(
+    cfg_override: &ConfigOverride,
+    cluster: Option<Cluster>,
+    script: Option<String>,
+) -> Result<()> {
     with_config(cfg_override, |cfg| {
         if !is_initialized() {
             return Err(DevToolError::NotInitialized.into());
@@ -47,6 +51,20 @@ pub fn deploy(cfg_override: &ConfigOverride, cluster: Option<Cluster>) -> Result
         }
 
         println!("Deploy Successful");
+
+        if script.is_some() {
+            let script_exit = std::process::Command::new("bash")
+                .arg("-c")
+                .arg(script.unwrap())
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .output()
+                .unwrap();
+
+            if !script_exit.status.success() {
+                std::process::exit(exit.status.code().unwrap_or(1));
+            }
+        }
 
         Ok(())
     })
