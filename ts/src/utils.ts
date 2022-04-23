@@ -1,4 +1,9 @@
-import { PublicKey } from "@solana/web3.js";
+import {
+  createAssociatedTokenAccountInstruction,
+  getAccount,
+  getAssociatedTokenAddress,
+} from "@solana/spl-token";
+import { Connection, Keypair, PublicKey, Transaction } from "@solana/web3.js";
 import BN from "bn.js";
 
 export async function getVaultOwnerAndNonce(
@@ -18,4 +23,50 @@ export async function getVaultOwnerAndNonce(
       nonce.iaddn(1);
     }
   }
+}
+
+export function getDecimalCount(value): number {
+  if (
+    !isNaN(value) &&
+    Math.floor(value) !== value &&
+    value.toString().includes(".")
+  )
+    return value.toString().split(".")[1].length || 0;
+  if (
+    !isNaN(value) &&
+    Math.floor(value) !== value &&
+    value.toString().includes("e")
+  )
+    return parseInt(value.toString().split("e-")[1] || "0");
+  return 0;
+}
+
+export async function withAssociatedTokenAccount(
+  connection: Connection,
+  mint: PublicKey,
+  owner: Keypair,
+  transaction: Transaction,
+): Promise<PublicKey> {
+  const ataAddress = await getAssociatedTokenAddress(
+    mint,
+    owner.publicKey,
+    true,
+  );
+  try {
+    await getAccount(connection, ataAddress, "confirmed");
+  } catch (e) {
+    transaction.add(
+      await createAssociatedTokenAccountInstruction(
+        owner.publicKey,
+        ataAddress,
+        owner.publicKey,
+        mint,
+      ),
+    );
+  }
+  return ataAddress;
+}
+
+export function getUnixTs() {
+  return new Date().getTime() / 1000;
 }

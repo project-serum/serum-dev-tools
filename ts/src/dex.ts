@@ -14,7 +14,8 @@ import { Coin } from "./coin";
 
 export type MarketArgs = {
   tickSize: number;
-  lotSize: number;
+  baseLotSize: BN;
+  quoteLotSize: BN;
   feeRate: number;
   quoteDustThreshold: BN;
 };
@@ -38,22 +39,24 @@ export class Dex {
     symbol: string,
     decimals: number,
     payer: Keypair,
-    mintAuthority: PublicKey | null,
-    freezeAuthority: PublicKey | null,
+    mintAuthority: Keypair | null,
+    freezeAuthority: Keypair | null,
   ): Promise<Coin> => {
     const mint = await createMint(
       this.connection,
       payer,
-      mintAuthority,
-      freezeAuthority,
+      mintAuthority ? mintAuthority.publicKey : null,
+      freezeAuthority ? freezeAuthority.publicKey : null,
       decimals,
     );
 
-    const coin: Coin = {
-      mint,
-      decimals,
+    const coin = new Coin(
       symbol,
-    };
+      decimals,
+      mint,
+      mintAuthority,
+      freezeAuthority,
+    );
 
     this.coins.push(coin);
 
@@ -117,14 +120,16 @@ export class Dex {
     ]);
     await this.connection.confirmTransaction(vaultSig);
 
-    let baseLotSize;
-    let quoteLotSize;
-    if (marketArgs.lotSize > 0) {
-      baseLotSize = Math.round(10 ** baseCoin.decimals * marketArgs.lotSize);
-      quoteLotSize = Math.round(
-        marketArgs.lotSize * 10 ** quoteCoin.decimals * marketArgs.tickSize,
-      );
-    }
+    // let baseLotSize;
+    // let quoteLotSize;
+    // if (marketArgs.lotSize > 0) {
+    //   baseLotSize = Math.round(10 ** baseCoin.decimals * marketArgs.lotSize);
+    //   quoteLotSize = Math.round(
+    //     10 ** quoteCoin.decimals * marketArgs.lotSize * marketArgs.tickSize,
+    //   );
+    // } else {
+    //   throw new Error("Invalid Lot Size");
+    // }
 
     const accountsIx = await DexMarket.createMarketAccountsInstructions(
       marketAccounts,
@@ -143,8 +148,8 @@ export class Dex {
       quoteVault: quoteVault.publicKey,
       baseMint: baseCoin.mint,
       quoteMint: quoteCoin.mint,
-      baseLotSize: new BN(baseLotSize),
-      quoteLotSize: new BN(quoteLotSize),
+      baseLotSize: marketArgs.baseLotSize,
+      quoteLotSize: marketArgs.quoteLotSize,
       feeRateBps: marketArgs.feeRate,
       quoteDustThreshold: marketArgs.quoteDustThreshold,
       vaultSignerNonce: vaultOwnerNonce,

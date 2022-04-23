@@ -23,29 +23,23 @@ const main = async () => {
   );
   const dex = new Dex(dexAddress, connection);
 
-  const baseCoin = await dex.createCoin(
-    "SAYA",
-    9,
-    owner,
-    owner.publicKey,
-    owner.publicKey,
-  );
-  const quoteCoin = await dex.createCoin(
-    "SRM",
-    9,
-    owner,
-    owner.publicKey,
-    owner.publicKey,
-  );
+  const baseCoin = await dex.createCoin("SAYA", 0, owner, owner, owner);
+  const quoteCoin = await dex.createCoin("SRM", 6, owner, owner, owner);
 
   const market = await dex.initDexMarket(owner, baseCoin, quoteCoin, {
-    tickSize: 0.001,
-    lotSize: 10,
+    tickSize: 0.01,
+    baseLotSize: new BN(1),
+    quoteLotSize: new BN(1e4),
     feeRate: 10,
     quoteDustThreshold: new BN(100),
   });
 
   console.log(`Created ${market.marketSymbol} market.`);
+
+  await baseCoin.fundAccount(10000, owner, connection);
+  await quoteCoin.fundAccount(20000, owner, connection);
+
+  await market.placeOrder(connection, owner, "buy", 1, 10);
 };
 
 const runMain = async () => {

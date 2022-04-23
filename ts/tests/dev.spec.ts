@@ -35,7 +35,7 @@ describe("Serum Dev Tools", () => {
     assert.equal(coin.symbol, "SAYA");
   });
 
-  it("can create dex accounts", async () => {
+  it("can init dex market", async () => {
     await dex.createCoin("SRM", 6, owner, owner.publicKey, null);
 
     const dexMarket = await dex.initDexMarket(
