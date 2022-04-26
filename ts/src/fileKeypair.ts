@@ -39,4 +39,11 @@ export class FileKeypair {
 
     return new FileKeypair(filePath, keypair);
   }
+
+  static withKeypair(filePath: string, keypair: Keypair): FileKeypair {
+    const secretKey = Array.from(keypair.secretKey);
+    fs.writeFileSync(filePath, JSON.stringify(secretKey));
+
+    return new FileKeypair(filePath, keypair);
+  }
 }
