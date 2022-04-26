@@ -8,9 +8,11 @@ import {
   Transaction,
 } from "@solana/web3.js";
 import { DexMarket, MarketAccounts } from "./market";
-import { DexInstructions, Market as SerumMarket } from "@project-serum/serum";
+import { DexInstructions } from "@project-serum/serum";
 import { getVaultOwnerAndNonce } from "./utils";
 import { Coin } from "./coin";
+import { fork } from "child_process";
+import { FileKeypair } from "./fileKeypair";
 
 export type MarketArgs = {
   tickSize: number;
@@ -169,16 +171,10 @@ export class Dex {
 
     await this.connection.confirmTransaction(txSig, "confirmed");
 
-    const serumMarket = await SerumMarket.load(
+    const dexMarket = await DexMarket.load(
       this.connection,
-      marketAccounts.market.publicKey,
-      { commitment: "confirmed" },
       this.address,
-    );
-
-    const dexMarket = new DexMarket(
-      marketAccounts,
-      serumMarket,
+      marketAccounts.market.publicKey,
       baseCoin,
       quoteCoin,
     );
@@ -186,5 +182,32 @@ export class Dex {
     this.markets.push(dexMarket);
 
     return dexMarket;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public async runMarketMaker(market: DexMarket, owner: FileKeypair) {
+    const child = fork("./src/scripts/marketMaker", null, {
+      detached: true,
+      stdio: ["pipe", 0, 0, "ipc"],
+      env: {
+        size: "1",
+        price: "10",
+      },
+    });
+
+    // https://nodejs.org/api/child_process.html#optionsdetached
+    child.unref();
+
+    child.send({
+      action: "start",
+      args: {
+        marketAddress: market.address.toString(),
+        programID: this.address.toString(),
+        rpcEndpoint: this.connection.rpcEndpoint,
+        ownerFilePath: owner.filePath,
+      },
+    });
+
+    console.log(`Market Maker started at process ${child.pid}`);
   }
 }

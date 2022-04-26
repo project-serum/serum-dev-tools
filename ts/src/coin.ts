@@ -52,9 +52,5 @@ export class Coin {
     );
 
     await connection.confirmTransaction(txSig);
-
-    console.log(
-      `Funded ${decimalAmount} ${this.symbol} to ${owner.publicKey.toString()}`,
-    );
   }
 }

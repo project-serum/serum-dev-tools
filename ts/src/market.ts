@@ -12,6 +12,7 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
+import { Market as SerumMarket } from "@project-serum/serum";
 import { Coin } from "./coin";
 import { getDecimalCount, withAssociatedTokenAccount } from "./utils";
 
@@ -33,7 +34,7 @@ export class DexMarket {
 
   public serumMarket: Market;
 
-  public marketAccounts: MarketAccounts;
+  // public marketAccounts: MarketAccounts;
 
   public baseCoin: Coin;
 
@@ -42,17 +43,40 @@ export class DexMarket {
   public marketSymbol: string;
 
   constructor(
-    marketAccounts: MarketAccounts,
+    address: PublicKey,
     serumMarket: Market,
     baseCoin: Coin,
     quoteCoin: Coin,
   ) {
-    this.address = marketAccounts.market.publicKey;
+    this.address = address;
     this.serumMarket = serumMarket;
-    this.marketAccounts = marketAccounts;
     this.baseCoin = baseCoin;
     this.quoteCoin = quoteCoin;
     this.marketSymbol = `${baseCoin.symbol}/${quoteCoin.symbol}`;
+  }
+
+  static async load(
+    connection: Connection,
+    programID: PublicKey,
+    marketAddress: PublicKey,
+    baseCoin: Coin,
+    quoteCoin: Coin,
+  ): Promise<DexMarket> {
+    const serumMarket = await SerumMarket.load(
+      connection,
+      marketAddress,
+      { commitment: "confirmed" },
+      programID,
+    );
+
+    const dexMarket = new DexMarket(
+      marketAddress,
+      serumMarket,
+      baseCoin,
+      quoteCoin,
+    );
+
+    return dexMarket;
   }
 
   static async createMarketVaultsTransaction(
@@ -155,16 +179,15 @@ export class DexMarket {
     return [marketIx, requestQueueIx, eventQueueIx, bidsIx, asksIx];
   }
 
-  private sanityCheck(price: number, size: number) {
+  static sanityCheck(serumMarket: SerumMarket, price: number, size: number) {
     const formattedMinOrderSize =
-      this.serumMarket.minOrderSize?.toFixed(
-        getDecimalCount(this.serumMarket.minOrderSize),
-      ) || this.serumMarket.minOrderSize;
+      serumMarket.minOrderSize?.toFixed(
+        getDecimalCount(serumMarket.minOrderSize),
+      ) || serumMarket.minOrderSize;
 
     const formattedTickSize =
-      this.serumMarket.tickSize?.toFixed(
-        getDecimalCount(this.serumMarket.tickSize),
-      ) || this.serumMarket.tickSize;
+      serumMarket.tickSize?.toFixed(getDecimalCount(serumMarket.tickSize)) ||
+      serumMarket.tickSize;
 
     const isIncrement = (num, step) =>
       Math.abs((num / step) % 1) < 1e-5 ||
@@ -174,30 +197,31 @@ export class DexMarket {
 
     if (isNaN(size)) throw new Error("Invalid Size");
 
-    if (!isIncrement(size, this.serumMarket.minOrderSize))
+    if (!isIncrement(size, serumMarket.minOrderSize))
       throw new Error(`Size must be an increment of ${formattedMinOrderSize}`);
 
-    if (size < this.serumMarket.minOrderSize)
+    if (size < serumMarket.minOrderSize)
       throw new Error(`Size must be greater than ${formattedMinOrderSize}`);
 
-    if (!isIncrement(price, this.serumMarket.tickSize))
+    if (!isIncrement(price, serumMarket.tickSize))
       throw new Error(
         `Price: ${price} must be an increment of ${formattedTickSize}`,
       );
 
-    if (price < this.serumMarket.tickSize)
+    if (price < serumMarket.tickSize)
       throw new Error(`Price must be greater than ${formattedTickSize}`);
   }
 
-  public async placeOrder(
+  static async placeOrder(
     connection: Connection,
     owner: Keypair,
+    serumMarket: SerumMarket,
     side: "buy" | "sell",
     size: number,
     price: number,
-  ) {
+  ): Promise<string> {
     try {
-      this.sanityCheck(price, size);
+      DexMarket.sanityCheck(serumMarket, price, size);
     } catch (e) {
       console.log(e);
       throw new Error("Sanity check failed");
@@ -210,13 +234,13 @@ export class DexMarket {
 
     const baseCurrencyAccount = await withAssociatedTokenAccount(
       connection,
-      this.baseCoin.mint,
+      serumMarket.baseMintAddress,
       owner,
       transaction,
     );
     const quoteCurrencyAccount = await withAssociatedTokenAccount(
       connection,
-      this.quoteCoin.mint,
+      serumMarket.quoteMintAddress,
       owner,
       transaction,
     );
@@ -237,7 +261,7 @@ export class DexMarket {
     };
 
     const { transaction: placeOrderTx, signers: placeOrderSigners } =
-      await this.serumMarket.makePlaceOrderTransaction(
+      await serumMarket.makePlaceOrderTransaction(
         connection,
         params,
         120_000,
@@ -254,6 +278,6 @@ export class DexMarket {
     const txSig = await connection.sendTransaction(transaction, signers);
     await connection.confirmTransaction(txSig, "confirmed");
 
-    console.log(`Order placed: ${txSig}`);
+    return txSig;
   }
 }
