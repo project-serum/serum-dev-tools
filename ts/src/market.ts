@@ -1,5 +1,9 @@
-import { Market } from "@project-serum/serum";
-import { OrderParams } from "@project-serum/serum/lib/market";
+import { DexInstructions, Market } from "@project-serum/serum";
+import {
+  OpenOrders,
+  Order,
+  OrderParams,
+} from "@project-serum/serum/lib/market";
 import {
   createInitializeAccountInstruction,
   TOKEN_PROGRAM_ID,
@@ -15,6 +19,7 @@ import {
 import { Market as SerumMarket } from "@project-serum/serum";
 import { Coin } from "./coin";
 import { getDecimalCount, withAssociatedTokenAccount } from "./utils";
+import { TransactionWithSigners } from "./types";
 
 const REQUEST_QUEUE_SIZE = 5120 + 12; // https://github.com/mithraiclabs/psyoptions/blob/f0c9f73408a27676e0c7f156f5cae71f73f59c3f/programs/psy_american/src/lib.rs#L1003
 const EVENT_QUEUE_SIZE = 262144 + 12; // https://github.com/mithraiclabs/psyoptions-ts/blob/ba1888ea83e634e1c7a8dad820fe67d053cf3f5c/packages/psy-american/src/instructions/initializeSerumMarket.ts#L84
@@ -212,20 +217,26 @@ export class DexMarket {
       throw new Error(`Price must be greater than ${formattedTickSize}`);
   }
 
-  static async placeOrder(
+  static async getPlaceOrderTransaction(
     connection: Connection,
     owner: Keypair,
     serumMarket: SerumMarket,
     side: "buy" | "sell",
     size: number,
     price: number,
-  ): Promise<string> {
+  ): Promise<TransactionWithSigners> {
     try {
       DexMarket.sanityCheck(serumMarket, price, size);
     } catch (e) {
       console.log(e);
       throw new Error("Sanity check failed");
     }
+
+    const openOrders = await DexMarket.getOrCreateOpenOrderAccount(
+      owner,
+      serumMarket,
+      connection,
+    );
 
     const transaction = new Transaction();
     const signers: Keypair[] = [];
@@ -258,6 +269,7 @@ export class DexMarket {
       size,
       orderType: "limit",
       feeDiscountPubkey: null,
+      openOrdersAddressKey: openOrders.address,
     };
 
     const { transaction: placeOrderTx, signers: placeOrderSigners } =
@@ -275,9 +287,118 @@ export class DexMarket {
       ),
     );
 
+    return { transaction, signers };
+  }
+
+  static async placeOrder(
+    connection: Connection,
+    owner: Keypair,
+    serumMarket: SerumMarket,
+    side: "buy" | "sell",
+    size: number,
+    price: number,
+  ): Promise<string> {
+    const { transaction, signers } = await DexMarket.getPlaceOrderTransaction(
+      connection,
+      owner,
+      serumMarket,
+      side,
+      size,
+      price,
+    );
+
     const txSig = await connection.sendTransaction(transaction, signers);
     await connection.confirmTransaction(txSig, "confirmed");
 
     return txSig;
+  }
+
+  static async getCancelOrderTransaction(
+    connection: Connection,
+    owner: Keypair,
+    serumMarket: SerumMarket,
+    order: Order,
+  ): Promise<TransactionWithSigners> {
+    const transaction = await serumMarket.makeCancelOrderTransaction(
+      connection,
+      owner.publicKey,
+      order,
+    );
+
+    return {
+      transaction,
+      signers: [owner],
+    };
+  }
+
+  static async cancelOrder(
+    connection: Connection,
+    owner: Keypair,
+    serumMarket: SerumMarket,
+    order: Order,
+  ): Promise<string> {
+    const { transaction, signers } = await DexMarket.getCancelOrderTransaction(
+      connection,
+      owner,
+      serumMarket,
+      order,
+    );
+
+    const txSig = await connection.sendTransaction(transaction, signers);
+    await connection.confirmTransaction(txSig, "confirmed");
+
+    return txSig;
+  }
+
+  static async getOrCreateOpenOrderAccount(
+    owner: Keypair,
+    serumMarket: SerumMarket,
+    connection: Connection,
+  ): Promise<OpenOrders> {
+    let openOrdersAccounts = await serumMarket.findOpenOrdersAccountsForOwner(
+      connection,
+      owner.publicKey,
+      0,
+    );
+
+    if (openOrdersAccounts.length > 0) {
+      return openOrdersAccounts[0];
+    } else {
+      const openOrderKP = Keypair.generate();
+
+      const tx = new Transaction();
+      tx.add(
+        await OpenOrders.makeCreateAccountTransaction(
+          connection,
+          serumMarket.address,
+          owner.publicKey,
+          openOrderKP.publicKey,
+          serumMarket.programId,
+        ),
+        await DexInstructions.initOpenOrders({
+          market: serumMarket.publicKey,
+          openOrders: openOrderKP.publicKey,
+          owner: owner.publicKey,
+          programId: serumMarket.programId,
+          marketAuthority: null,
+        }),
+      );
+
+      const txSig = await connection.sendTransaction(tx, [owner, openOrderKP]);
+      console.log(txSig);
+      await connection.confirmTransaction(txSig, "confirmed");
+
+      openOrdersAccounts = await serumMarket.findOpenOrdersAccountsForOwner(
+        connection,
+        owner.publicKey,
+        0,
+      );
+
+      if (openOrdersAccounts.length === 0) {
+        throw new Error("Could not create open orders account");
+      }
+
+      return openOrdersAccounts[0];
+    }
   }
 }
