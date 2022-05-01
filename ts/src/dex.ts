@@ -11,7 +11,7 @@ import { DexMarket, MarketAccounts } from "./market";
 import { DexInstructions } from "@project-serum/serum";
 import { getVaultOwnerAndNonce } from "./utils";
 import { Coin } from "./coin";
-import { fork } from "child_process";
+import { ChildProcess, fork } from "child_process";
 import { FileKeypair } from "./fileKeypair";
 
 export type MarketArgs = {
@@ -20,6 +20,11 @@ export type MarketArgs = {
   quoteLotSize: BN;
   feeRate: number;
   quoteDustThreshold: BN;
+};
+
+type MarketMakerOpts = {
+  unref: boolean;
+  durationInSecs: number;
 };
 export class Dex {
   public address: PublicKey;
@@ -185,7 +190,11 @@ export class Dex {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public async runMarketMaker(market: DexMarket, owner: FileKeypair) {
+  public runMarketMaker(
+    market: DexMarket,
+    owner: FileKeypair,
+    opts: MarketMakerOpts,
+  ): ChildProcess {
     const child = fork("./src/scripts/marketMaker", null, {
       detached: true,
       stdio: ["pipe", 0, 0, "ipc"],
@@ -196,7 +205,7 @@ export class Dex {
     });
 
     // https://nodejs.org/api/child_process.html#optionsdetached
-    child.unref();
+    if (opts.unref) child.unref();
 
     child.send({
       action: "start",
@@ -205,9 +214,10 @@ export class Dex {
         programID: this.address.toString(),
         rpcEndpoint: this.connection.rpcEndpoint,
         ownerFilePath: owner.filePath,
+        duration: opts.durationInSecs * 1000,
       },
     });
 
-    console.log(`Market Maker started at process ${child.pid}`);
+    return child;
   }
 }
