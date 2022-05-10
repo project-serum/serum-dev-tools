@@ -1,6 +1,7 @@
 /node_modules/
 /dist/
 /coverage/
-test-ledger/
+/test-ledger
+/tests/keys
 
 NOTES.md

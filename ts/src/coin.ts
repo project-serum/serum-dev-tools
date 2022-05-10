@@ -1,5 +1,11 @@
 import { getOrCreateAssociatedTokenAccount, mintTo } from "@solana/spl-token";
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  RpcResponseAndContext,
+  TokenAmount,
+} from "@solana/web3.js";
 
 export class Coin {
   symbol: string;
@@ -24,6 +30,27 @@ export class Coin {
     this.mint = mint;
     this.mintAuthority = mintAuthority;
     this.freezeAuthority = freezeAuthority;
+  }
+
+  public async getBalance(
+    owner: Keypair,
+    connection: Connection,
+  ): Promise<RpcResponseAndContext<TokenAmount>> {
+    const ata = await getOrCreateAssociatedTokenAccount(
+      connection,
+      owner,
+      this.mint,
+      owner.publicKey,
+      true,
+      "confirmed",
+    );
+
+    const tokenAmount = await connection.getTokenAccountBalance(
+      ata.address,
+      "confirmed",
+    );
+
+    return tokenAmount;
   }
 
   public async fundAccount(
