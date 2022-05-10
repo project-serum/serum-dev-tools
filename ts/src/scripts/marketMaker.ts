@@ -8,6 +8,8 @@ import {
 import { Market as SerumMarket } from "@project-serum/serum";
 import { FileKeypair } from "../fileKeypair";
 import { DexMarket } from "../market";
+import axios from "axios";
+import { getDecimalCount, roundToDecimal } from "../utils";
 
 type MessageType = {
   action: "start";
@@ -20,6 +22,15 @@ process.on("message", async (message: MessageType) => {
     await marketMaker(message.args);
   }
 });
+
+const getMidPrice = async (
+  baseSymbol: string,
+  quoteSymbol: string,
+): Promise<number> => {
+  const API_URL = `https://api.coingecko.com/api/v3/simple/price?ids=${baseSymbol}&vs_currencies=${quoteSymbol}`;
+  const response = await axios.get(API_URL);
+  return response.data[baseSymbol][quoteSymbol];
+};
 
 const cancelOrders = async (
   owner: Keypair,
@@ -51,7 +62,7 @@ const cancelOrders = async (
 
   await connection.confirmTransaction(txSig, "confirmed");
 
-  console.log(`----- Cancelled ${orders.length} orders ------`);
+  console.log(`----- ${orders.length} CancelOrders Confirmed -----`);
 };
 
 const placeOrders = async (
@@ -59,33 +70,75 @@ const placeOrders = async (
   serumMarket: SerumMarket,
   connection: Connection,
   opts: {
-    isBuy: boolean;
-    midPrice: number;
-    count: number;
+    orderCount: number;
+    initialBidSize: number;
+    baseGeckoSymbol: string;
+    quoteGeckoSymbol: string;
   },
 ) => {
-  const { isBuy, midPrice, count } = opts;
+  let midPrice: number;
+  try {
+    midPrice = await getMidPrice(opts.baseGeckoSymbol, opts.quoteGeckoSymbol);
+  } catch (e) {
+    console.error("Couldn't fetch price from CoinGecko.");
+    process.exit(1);
+  }
+
+  console.log("Mid price:", midPrice);
+
+  const { orderCount, initialBidSize } = opts;
 
   const tx = new Transaction();
   const signersArray: Signer[][] = [];
 
-  for (let i = 0; i < count; i++) {
-    const orderPrice =
-      midPrice +
-      (isBuy ? -1 * (midPrice * 0.01 * (i + 1)) : midPrice * 0.01) * (i + 1);
+  let bidSizeMultiplier = 1;
 
-    const { transaction, signers } = await DexMarket.getPlaceOrderTransaction(
-      connection,
-      owner,
-      serumMarket,
-      isBuy ? "buy" : "sell",
-      10,
-      orderPrice,
+  for (let i = 0; i < orderCount; i++, bidSizeMultiplier++) {
+    const buyPrice = roundToDecimal(
+      midPrice * (1 - 0.01 * (i + 1)),
+      getDecimalCount(serumMarket.tickSize),
     );
-    tx.add(transaction);
-    signersArray.push(signers);
+    const sellPrice = roundToDecimal(
+      midPrice * (1 + 0.01 * (i + 1)),
+      getDecimalCount(serumMarket.tickSize),
+    );
 
-    console.log(`Order ${i} price: ${orderPrice}`);
+    const buySize = roundToDecimal(
+      initialBidSize * bidSizeMultiplier,
+      getDecimalCount(serumMarket.minOrderSize),
+    );
+    const sellSize = roundToDecimal(
+      (initialBidSize * bidSizeMultiplier) / midPrice,
+      getDecimalCount(serumMarket.minOrderSize),
+    );
+
+    const { transaction: buyTransaction, signers: buySigners } =
+      await DexMarket.getPlaceOrderTransaction(
+        connection,
+        owner,
+        serumMarket,
+        "buy",
+        buySize,
+        buyPrice,
+      );
+    tx.add(buyTransaction);
+    signersArray.push(buySigners);
+
+    console.log(`Bid placed with price ${buyPrice} and size ${buySize}`);
+
+    const { transaction: sellTransaction, signers: sellSigners } =
+      await DexMarket.getPlaceOrderTransaction(
+        connection,
+        owner,
+        serumMarket,
+        "sell",
+        sellSize,
+        sellPrice,
+      );
+    tx.add(sellTransaction);
+    signersArray.push(sellSigners);
+
+    console.log(`Ask placed with price ${sellPrice} and size ${sellSize}`);
   }
 
   const signersUnion: Signer[] = [...new Set(signersArray.flat())];
@@ -94,11 +147,7 @@ const placeOrders = async (
 
   await connection.confirmTransaction(txSig, "confirmed");
 
-  console.log(
-    `----- Placed ${count} ${
-      isBuy ? "buy" : "sell"
-    } orders at midPrice: ${midPrice} ------c`,
-  );
+  console.log(`----- ${orderCount * 2} PlaceOrders Confirmed -----`);
 };
 
 const marketMaker = async (args) => {
@@ -114,17 +163,19 @@ const marketMaker = async (args) => {
   const owner = FileKeypair.load(args.ownerFilePath);
 
   placeOrders(owner.keypair, serumMarket, connection, {
-    isBuy: true,
-    midPrice: 10,
-    count: 3,
+    orderCount: Number.parseInt(args.orderCount),
+    initialBidSize: Number.parseInt(args.initialBidSize),
+    baseGeckoSymbol: args.baseGeckoSymbol,
+    quoteGeckoSymbol: args.quoteGeckoSymbol,
   });
 
   setInterval(async () => {
     await cancelOrders(owner.keypair, serumMarket, connection);
     await placeOrders(owner.keypair, serumMarket, connection, {
-      isBuy: true,
-      midPrice: 10,
-      count: 3,
+      orderCount: Number.parseInt(args.orderCount),
+      initialBidSize: Number.parseInt(args.initialBidSize),
+      baseGeckoSymbol: args.baseGeckoSymbol,
+      quoteGeckoSymbol: args.quoteGeckoSymbol,
     });
   }, 10000);
 

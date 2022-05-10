@@ -70,3 +70,10 @@ export async function withAssociatedTokenAccount(
 export function getUnixTs() {
   return new Date().getTime() / 1000;
 }
+
+export function roundToDecimal(
+  value: number,
+  decimals: number | undefined | null,
+) {
+  return decimals ? Math.round(value * 10 ** decimals) / 10 ** decimals : value;
+}

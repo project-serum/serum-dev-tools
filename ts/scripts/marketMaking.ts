@@ -2,6 +2,8 @@ import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { Dex, FileKeypair } from "../src";
 
+process.on("beforeExit", () => console.log("Parent process exiting..."));
+
 const main = async () => {
   const connection = new Connection("http://localhost:8899", "confirmed");
 
@@ -9,7 +11,7 @@ const main = async () => {
 
   const airdropSig = await connection.requestAirdrop(
     owner.keypair.publicKey,
-    5 * LAMPORTS_PER_SOL,
+    10 * LAMPORTS_PER_SOL,
   );
   await connection.confirmTransaction(airdropSig);
 
@@ -20,35 +22,55 @@ const main = async () => {
 
   const baseCoin = await dex.createCoin(
     "SAYA",
-    0,
+    9,
     owner.keypair,
     owner.keypair,
     owner.keypair,
   );
   const quoteCoin = await dex.createCoin(
     "SRM",
-    6,
+    9,
     owner.keypair,
     owner.keypair,
     owner.keypair,
   );
 
   const market = await dex.initDexMarket(owner.keypair, baseCoin, quoteCoin, {
-    tickSize: 0.01,
-    baseLotSize: new BN(1),
-    quoteLotSize: new BN(1e4),
+    lotSize: 1e-3,
+    tickSize: 1e-2,
     feeRate: 10,
     quoteDustThreshold: new BN(100),
   });
 
-  console.log(`Created ${market.marketSymbol} market.`);
+  console.log(
+    `Created ${market.marketSymbol} market @ ${market.address.toString()}`,
+  );
 
-  await baseCoin.fundAccount(10000, owner.keypair, connection);
-  await quoteCoin.fundAccount(20000, owner.keypair, connection);
+  await baseCoin.fundAccount(1000000, owner.keypair, connection);
+  await quoteCoin.fundAccount(2000000, owner.keypair, connection);
 
   console.log(`Funded owner with ${baseCoin.symbol} and ${quoteCoin.symbol}`);
 
-  dex.runMarketMaker(market, owner);
+  const marketMaker = dex.runMarketMaker(market, owner, {
+    unref: true,
+    durationInSecs: 30,
+    orderCount: 3,
+    initialBidSize: 1000,
+    baseGeckoSymbol: "solana",
+    quoteGeckoSymbol: "usd",
+  });
+
+  console.log(`Market Maker running at process: ${marketMaker.pid}`);
 };
 
-main();
+const runMain = async () => {
+  try {
+    await main();
+    process.exit(0);
+  } catch (err) {
+    console.error(err);
+    process.exit(1);
+  }
+};
+
+runMain();

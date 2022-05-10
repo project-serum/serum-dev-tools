@@ -195,8 +195,8 @@ export class DexMarket {
       serumMarket.tickSize;
 
     const isIncrement = (num, step) =>
-      Math.abs((num / step) % 1) < 1e-5 ||
-      Math.abs(((num / step) % 1) - 1) < 1e-5;
+      Math.abs((num / step) % 1) < 1e-3 ||
+      Math.abs(((num / step) % 1) - 1) < 1e-3;
 
     if (isNaN(price)) throw new Error("Invalid Price");
 
@@ -385,7 +385,6 @@ export class DexMarket {
       );
 
       const txSig = await connection.sendTransaction(tx, [owner, openOrderKP]);
-      console.log(txSig);
       await connection.confirmTransaction(txSig, "confirmed");
 
       openOrdersAccounts = await serumMarket.findOpenOrdersAccountsForOwner(

@@ -15,9 +15,8 @@ import { ChildProcess, fork } from "child_process";
 import { FileKeypair } from "./fileKeypair";
 
 export type MarketArgs = {
+  lotSize: number;
   tickSize: number;
-  baseLotSize: BN;
-  quoteLotSize: BN;
   feeRate: number;
   quoteDustThreshold: BN;
 };
@@ -25,6 +24,10 @@ export type MarketArgs = {
 type MarketMakerOpts = {
   unref: boolean;
   durationInSecs: number;
+  orderCount: number;
+  initialBidSize: number;
+  baseGeckoSymbol: string;
+  quoteGeckoSymbol: string;
 };
 export class Dex {
   public address: PublicKey;
@@ -127,16 +130,16 @@ export class Dex {
     ]);
     await this.connection.confirmTransaction(vaultSig);
 
-    // let baseLotSize;
-    // let quoteLotSize;
-    // if (marketArgs.lotSize > 0) {
-    //   baseLotSize = Math.round(10 ** baseCoin.decimals * marketArgs.lotSize);
-    //   quoteLotSize = Math.round(
-    //     10 ** quoteCoin.decimals * marketArgs.lotSize * marketArgs.tickSize,
-    //   );
-    // } else {
-    //   throw new Error("Invalid Lot Size");
-    // }
+    let baseLotSize;
+    let quoteLotSize;
+    if (marketArgs.lotSize > 0) {
+      baseLotSize = Math.round(10 ** baseCoin.decimals * marketArgs.lotSize);
+      quoteLotSize = Math.round(
+        10 ** quoteCoin.decimals * marketArgs.lotSize * marketArgs.tickSize,
+      );
+    } else {
+      throw new Error("Invalid Lot Size");
+    }
 
     const accountsIx = await DexMarket.createMarketAccountsInstructions(
       marketAccounts,
@@ -155,8 +158,8 @@ export class Dex {
       quoteVault: quoteVault.publicKey,
       baseMint: baseCoin.mint,
       quoteMint: quoteCoin.mint,
-      baseLotSize: marketArgs.baseLotSize,
-      quoteLotSize: marketArgs.quoteLotSize,
+      baseLotSize: new BN(baseLotSize),
+      quoteLotSize: new BN(quoteLotSize),
       feeRateBps: marketArgs.feeRate,
       quoteDustThreshold: marketArgs.quoteDustThreshold,
       vaultSignerNonce: vaultOwnerNonce,
@@ -215,6 +218,10 @@ export class Dex {
         rpcEndpoint: this.connection.rpcEndpoint,
         ownerFilePath: owner.filePath,
         duration: opts.durationInSecs * 1000,
+        orderCount: opts.orderCount,
+        initialBidSize: opts.initialBidSize,
+        baseGeckoSymbol: opts.baseGeckoSymbol,
+        quoteGeckoSymbol: opts.quoteGeckoSymbol,
       },
     });
 
