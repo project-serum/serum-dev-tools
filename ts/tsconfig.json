@@ -10,5 +10,9 @@
     // for BN constructor
     "esModuleInterop": true
   },
-  "include": ["src/**/*", "**/*.spec.ts", "**/*.test.ts"]
+  "include": ["src/**/*", "**/*.spec.ts", "**/*.test.ts"],
+  "typedocOptions": {
+    "entryPoints": ["src/index.ts"],
+    "out": "docs"
+  }
 }
