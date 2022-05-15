@@ -34,9 +34,6 @@ export interface MarketAccounts {
   asks: Keypair;
 }
 
-/**
- * Dex Market
- */
 export class DexMarket {
   public address: PublicKey;
 
