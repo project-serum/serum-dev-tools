@@ -29,6 +29,10 @@ type MarketMakerOpts = {
   baseGeckoSymbol: string;
   quoteGeckoSymbol: string;
 };
+
+/**
+ * Dex is a wrapper class for a deployed Serum Dex program.
+ */
 export class Dex {
   public address: PublicKey;
 
