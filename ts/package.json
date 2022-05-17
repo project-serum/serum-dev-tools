@@ -14,7 +14,8 @@
     "build": "rm -rf dist/; tsc",
     "test": "ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts",
     "prepare": "cd .. && husky install ts/.husky",
-    "lint": "eslint --fix"
+    "lint": "eslint --fix",
+    "docs": "typedoc --entryPoints src/index.ts"
   },
   "lint-staged": {
     "src/**/*.ts": [
