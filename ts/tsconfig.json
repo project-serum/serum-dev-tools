@@ -8,7 +8,8 @@
     "typeRoots": ["./node_modules/@types"],
     "types": ["mocha", "chai", "node"],
     // for BN constructor
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "skipLibCheck": true
   },
   "include": ["src/**/*", "**/*.spec.ts", "**/*.test.ts"],
   "typedocOptions": {
