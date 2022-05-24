@@ -3,5 +3,6 @@
 /coverage/
 /test-ledger
 /tests/keys
+/scripts/keys
 
 NOTES.md
