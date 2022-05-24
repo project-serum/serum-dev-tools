@@ -19,7 +19,7 @@ import {
 import { Market as SerumMarket } from "@project-serum/serum";
 import { Coin } from "./coin";
 import { getDecimalCount, withAssociatedTokenAccount } from "./utils";
-import { TransactionWithSigners } from "./types";
+import { OrderType, TransactionWithSigners } from "./types";
 
 const REQUEST_QUEUE_SIZE = 5120 + 12; // https://github.com/mithraiclabs/psyoptions/blob/f0c9f73408a27676e0c7f156f5cae71f73f59c3f/programs/psy_american/src/lib.rs#L1003
 const EVENT_QUEUE_SIZE = 262144 + 12; // https://github.com/mithraiclabs/psyoptions-ts/blob/ba1888ea83e634e1c7a8dad820fe67d053cf3f5c/packages/psy-american/src/instructions/initializeSerumMarket.ts#L84
@@ -34,13 +34,13 @@ export interface MarketAccounts {
   asks: Keypair;
 }
 
-// ssh-test
+/**
+ * A wrapper class around `serum-ts`'s `Market` class.
+ */
 export class DexMarket {
   public address: PublicKey;
 
   public serumMarket: Market;
-
-  // public marketAccounts: MarketAccounts;
 
   public baseCoin: Coin;
 
@@ -61,6 +61,16 @@ export class DexMarket {
     this.marketSymbol = `${baseCoin.symbol}/${quoteCoin.symbol}`;
   }
 
+  /**
+   * Load a `DexMarket` instance from a given market address.
+   *
+   * @param connection The `Connection` object to connect to Solana.
+   * @param programID The address of the `serum-dex` program deployed.
+   * @param marketAddress The address of the market to load.
+   * @param baseCoin The base `Coin` object provided by the `Coin` class.
+   * @param quoteCoin The quote `Coin` object provided by the `Coin` class.
+   * @returns
+   */
   static async load(
     connection: Connection,
     programID: PublicKey,
@@ -85,6 +95,18 @@ export class DexMarket {
     return dexMarket;
   }
 
+  /**
+   * Create a `Transaction` object for creating the vaults required for a DexMarket.
+   *
+   * @param payer The `Keypair` of the account that will pay for the transaction.
+   * @param vaultOwner The address assigned as the owner of the vault.
+   * @param baseVault The Token Account that would be used as the base vault.
+   * @param quoteVault The Token Account that would be used as the quote vault.
+   * @param baseCoin The base `Coin` object provided by the `Coin` class.
+   * @param quoteCoin The quote `Coin` object provided by the `Coin` class.
+   * @param connection The `Connection` object to connect to Solana.
+   * @returns
+   */
   static async createMarketVaultsTransaction(
     payer: Keypair,
     vaultOwner: PublicKey,
@@ -128,22 +150,31 @@ export class DexMarket {
     return tx;
   }
 
+  /**
+   *  Create a `Transaction` object for creating the accounts required for a DexMarket.
+   *
+   * @param accounts The `MarketAccounts` object containing the accounts needed for initializing the market.
+   * @param payer The `Keypair` object of the account that will pay for the transaction.
+   * @param connection The `Connection` object to connect to Solana.
+   * @param programID The address of the `serum-dex` program deployed.
+   * @returns
+   */
   static async createMarketAccountsInstructions(
     accounts: MarketAccounts,
     payer: Keypair,
     connection: Connection,
-    dexProgram: PublicKey,
+    programID: PublicKey,
   ): Promise<TransactionInstruction[]> {
     const { market, requestQueue, eventQueue, bids, asks } = accounts;
 
     const marketIx = SystemProgram.createAccount({
       newAccountPubkey: market.publicKey,
       fromPubkey: payer.publicKey,
-      space: Market.getLayout(dexProgram).span,
+      space: Market.getLayout(programID).span,
       lamports: await connection.getMinimumBalanceForRentExemption(
-        Market.getLayout(dexProgram).span,
+        Market.getLayout(programID).span,
       ),
-      programId: dexProgram,
+      programId: programID,
     });
 
     const requestQueueIx = SystemProgram.createAccount({
@@ -153,7 +184,7 @@ export class DexMarket {
       lamports: await connection.getMinimumBalanceForRentExemption(
         REQUEST_QUEUE_SIZE,
       ),
-      programId: dexProgram,
+      programId: programID,
     });
 
     const eventQueueIx = SystemProgram.createAccount({
@@ -163,7 +194,7 @@ export class DexMarket {
       lamports: await connection.getMinimumBalanceForRentExemption(
         EVENT_QUEUE_SIZE,
       ),
-      programId: dexProgram,
+      programId: programID,
     });
 
     const bidsIx = SystemProgram.createAccount({
@@ -171,7 +202,7 @@ export class DexMarket {
       fromPubkey: payer.publicKey,
       space: BIDS_SIZE,
       lamports: await connection.getMinimumBalanceForRentExemption(BIDS_SIZE),
-      programId: dexProgram,
+      programId: programID,
     });
 
     const asksIx = SystemProgram.createAccount({
@@ -179,7 +210,7 @@ export class DexMarket {
       fromPubkey: payer.publicKey,
       space: ASKS_SIZE,
       lamports: await connection.getMinimumBalanceForRentExemption(ASKS_SIZE),
-      programId: dexProgram,
+      programId: programID,
     });
 
     return [marketIx, requestQueueIx, eventQueueIx, bidsIx, asksIx];
@@ -218,11 +249,24 @@ export class DexMarket {
       throw new Error(`Price must be greater than ${formattedTickSize}`);
   }
 
+  /**
+   * Create a `Transaction` object for placing an order.
+   *
+   * @param connection The `Connection` object to connect to Solana.
+   * @param owner The `PublicKey` of the owner of the order.
+   * @param serumMarket The `Market` object from `serum-ts` package.
+   * @param side The `Side` of the order.
+   * @param orderType The `OrderType` of the order.
+   * @param size The `size` of the order.
+   * @param price The `price` of the order.
+   * @returns
+   */
   static async getPlaceOrderTransaction(
     connection: Connection,
     owner: Keypair,
     serumMarket: SerumMarket,
     side: "buy" | "sell",
+    orderType: OrderType,
     size: number,
     price: number,
   ): Promise<TransactionWithSigners> {
@@ -268,7 +312,7 @@ export class DexMarket {
       side,
       price,
       size,
-      orderType: "limit",
+      orderType,
       feeDiscountPubkey: null,
       openOrdersAddressKey: openOrders.address,
     };
@@ -291,11 +335,24 @@ export class DexMarket {
     return { transaction, signers };
   }
 
+  /**
+   * Place an order on the DexMarket.
+   *
+   * @param connection The `Connection` object to connect to Solana.
+   * @param owner The `PublicKey` of the owner of the order.
+   * @param serumMarket The `Market` object from `serum-ts` package.
+   * @param side The `Side` of the order.
+   * @param orderType The `OrderType` of the order.
+   * @param size The `size` of the order.
+   * @param price The `price` of the order.
+   * @returns
+   */
   static async placeOrder(
     connection: Connection,
     owner: Keypair,
     serumMarket: SerumMarket,
     side: "buy" | "sell",
+    orderType: OrderType,
     size: number,
     price: number,
   ): Promise<string> {
@@ -304,6 +361,7 @@ export class DexMarket {
       owner,
       serumMarket,
       side,
+      orderType,
       size,
       price,
     );
@@ -314,6 +372,15 @@ export class DexMarket {
     return txSig;
   }
 
+  /**
+   * Create a `Transaction` object for cancelling an order.
+   *
+   * @param connection The `Connection` object to connect to Solana.
+   * @param owner The `PublicKey` of the owner of the order.
+   * @param serumMarket The `Market` object from `serum-ts` package.
+   * @param order The `Order` object to cancel.
+   * @returns
+   */
   static async getCancelOrderTransaction(
     connection: Connection,
     owner: Keypair,
@@ -332,6 +399,15 @@ export class DexMarket {
     };
   }
 
+  /**
+   * Cancel an order on the DexMarket.
+   *
+   * @param connection The `Connection` object to connect to Solana.
+   * @param owner The `PublicKey` of the owner of the order.
+   * @param serumMarket The `Market` object from `serum-ts` package.
+   * @param order The `Order` object to cancel.
+   * @returns
+   */
   static async cancelOrder(
     connection: Connection,
     owner: Keypair,

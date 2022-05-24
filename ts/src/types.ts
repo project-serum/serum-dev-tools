@@ -4,3 +4,5 @@ export type TransactionWithSigners = {
   transaction: Transaction;
   signers: Signer[];
 };
+
+export type OrderType = "limit" | "ioc" | "postOnly";

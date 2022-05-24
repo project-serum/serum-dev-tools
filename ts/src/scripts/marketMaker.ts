@@ -118,6 +118,7 @@ const placeOrders = async (
         owner,
         serumMarket,
         "buy",
+        "postOnly",
         buySize,
         buyPrice,
       );
@@ -132,6 +133,7 @@ const placeOrders = async (
         owner,
         serumMarket,
         "sell",
+        "postOnly",
         sellSize,
         sellPrice,
       );
