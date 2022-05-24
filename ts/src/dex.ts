@@ -211,6 +211,10 @@ export class Dex {
       },
     });
 
+    console.log(
+      `Process ${child.pid}: Running Market Maker for ${market.baseCoin.symbol}/${market.quoteCoin.symbol}. Note: No crank running`,
+    );
+
     // https://nodejs.org/api/child_process.html#optionsdetached
     if (opts.unref) child.unref();
 

@@ -52,7 +52,7 @@ const main = async () => {
 
   console.log(`Funded owner with ${baseCoin.symbol} and ${quoteCoin.symbol}`);
 
-  const marketMaker = dex.runMarketMaker(market, owner, {
+  dex.runMarketMaker(market, owner, {
     unref: true,
     durationInSecs: 30,
     orderCount: 3,
@@ -60,8 +60,6 @@ const main = async () => {
     baseGeckoSymbol: "solana",
     quoteGeckoSymbol: "usd",
   });
-
-  console.log(`Market Maker running at process: ${marketMaker.pid}`);
 };
 
 const runMain = async () => {
