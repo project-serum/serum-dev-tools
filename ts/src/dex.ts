@@ -14,13 +14,27 @@ import { Coin } from "./coin";
 import { ChildProcess, fork } from "child_process";
 import { FileKeypair } from "./fileKeypair";
 
-export type MarketArgs = {
+/**
+ * @param lotSize
+ * @param tickSize
+ * @param feeRate
+ * @param quoteDustThreshold
+ */
+export type MarketParams = {
   lotSize: number;
   tickSize: number;
   feeRate: number;
   quoteDustThreshold: BN;
 };
 
+/**
+ * @param unref
+ * @param durationInSecs
+ * @param orderCount
+ * @param initialBidSize
+ * @param baseGeckoSymbol
+ * @param quoteGeckoSymbol
+ */
 type MarketMakerOpts = {
   unref: boolean;
   durationInSecs: number;
@@ -49,6 +63,16 @@ export class Dex {
     this.markets = [];
   }
 
+  /**
+   * Create a `Coin` object to be associated with the `Dex`.
+   *
+   * @param symbol The symbol of the coin to create
+   * @param decimals The decimals of the coin to create
+   * @param payer The payer `Keypair` to use for the transactions
+   * @param mintAuthority The mint authority `Keypair` to use for the mint
+   * @param freezeAuthority The freeze authority `Keypair` to use for the mint
+   * @returns
+   */
   public createCoin = async (
     symbol: string,
     decimals: number,
@@ -77,12 +101,25 @@ export class Dex {
     return coin;
   };
 
+  /**
+   * Fetch one of the `Coin` objects associated with the `Dex` by symbol.
+   *
+   * @param symbol The symbol of the coin to fetch
+   * @returns
+   */
   public getCoin(symbol: string): Coin | null {
     const coin = this.coins.find((coin) => coin.symbol === symbol);
 
     return coin ? coin : null;
   }
 
+  /**
+   * Fetch a `DexMarket` object associated with the `Dex` by the base coin and quote coin.
+   *
+   * @param baseCoin The base `Coin` of the market to fetch
+   * @param quoteCoin The quote `Coin` of the market to fetch
+   * @returns
+   */
   public getMarket(baseCoin: Coin, quoteCoin: Coin): DexMarket | null {
     const dexMarket = this.markets.find(
       (market) =>
@@ -92,11 +129,20 @@ export class Dex {
     return dexMarket ? dexMarket : null;
   }
 
+  /**
+   * Initialize a `DexMarket` instance associated with the `Dex`.
+   *
+   * @param payer The payer `Keypair` to use for the transactions
+   * @param baseCoin The base `Coin` of the market to create
+   * @param quoteCoin The quote `Coin` of the market to create
+   * @param marketParams The parameters required to create the market
+   * @returns
+   */
   public async initDexMarket(
     payer: Keypair,
     baseCoin: Coin,
     quoteCoin: Coin,
-    marketArgs: MarketArgs,
+    marketParams: MarketParams,
   ): Promise<DexMarket> {
     if (this.getMarket(baseCoin, quoteCoin) != null) {
       throw new Error("Market already exists");
@@ -136,10 +182,10 @@ export class Dex {
 
     let baseLotSize;
     let quoteLotSize;
-    if (marketArgs.lotSize > 0) {
-      baseLotSize = Math.round(10 ** baseCoin.decimals * marketArgs.lotSize);
+    if (marketParams.lotSize > 0) {
+      baseLotSize = Math.round(10 ** baseCoin.decimals * marketParams.lotSize);
       quoteLotSize = Math.round(
-        10 ** quoteCoin.decimals * marketArgs.lotSize * marketArgs.tickSize,
+        10 ** quoteCoin.decimals * marketParams.lotSize * marketParams.tickSize,
       );
     } else {
       throw new Error("Invalid Lot Size");
@@ -164,8 +210,8 @@ export class Dex {
       quoteMint: quoteCoin.mint,
       baseLotSize: new BN(baseLotSize),
       quoteLotSize: new BN(quoteLotSize),
-      feeRateBps: marketArgs.feeRate,
-      quoteDustThreshold: marketArgs.quoteDustThreshold,
+      feeRateBps: marketParams.feeRate,
+      quoteDustThreshold: marketParams.quoteDustThreshold,
       vaultSignerNonce: vaultOwnerNonce,
       programId: this.address,
     });
@@ -196,7 +242,14 @@ export class Dex {
     return dexMarket;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  /**
+   * Runs a Market Making on a separate node process for `durationInSecs` seconds.
+   *
+   * @param market The `DexMarket` to run market maker on
+   * @param owner The owner `Keypair` to use for the market making.
+   * @param opts The market making options used.
+   * @returns
+   */
   public runMarketMaker(
     market: DexMarket,
     owner: FileKeypair,
@@ -205,10 +258,6 @@ export class Dex {
     const child = fork("./src/scripts/marketMaker", null, {
       detached: true,
       stdio: ["pipe", 0, 0, "ipc"],
-      env: {
-        size: "1",
-        price: "10",
-      },
     });
 
     console.log(
