@@ -1,0 +1,33 @@
+name: Publish Package to npmjs
+on:
+  release:
+    types: [created]
+jobs:
+  # build:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - run: cd ts
+  #     - uses: actions/setup-node@v3
+  #       with:
+  #         node-version: "16.x"
+  #     - run: cd ts
+  #     - run: yarn install --frozen-lockfile
+  #     - run: yarn test
+  publish:
+    # needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: cd ts
+      # Setup .npmrc file to publish to npm
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+          registry-url: "https://npm.pkg.github.com"
+          # Defaults to the user or organization that owns the workflow file
+          scope: "@project-serum"
+      - run: yarn
+      - run: yarn publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
