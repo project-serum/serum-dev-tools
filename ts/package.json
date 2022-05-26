@@ -1,7 +1,11 @@
 {
-  "name": "serum-dev-tools",
+  "name": "@project-serum/serum-dev-tools",
   "version": "1.0.0",
   "description": "developer tooling suite for building on serum",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/project-serum/serum-dev-tools.git"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,6 +26,9 @@
       "eslint --fix",
       "git add"
     ]
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.0",
