@@ -2,6 +2,9 @@ name: Publish Package to npmjs
 on:
   release:
     types: [created]
+defaults:
+  run:
+    working-directory: ts
 jobs:
   # build:
   #   runs-on: ubuntu-latest
@@ -19,7 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: cd ts
       # Setup .npmrc file to publish to npm
       - uses: actions/setup-node@v3
         with:
@@ -27,6 +29,8 @@ jobs:
           registry-url: "https://npm.pkg.github.com"
           # Defaults to the user or organization that owns the workflow file
           scope: "@project-serum"
+          cache: "npm"
+          cache-dependency-path: ts/package-lock.json
       - run: yarn
       - run: yarn publish --access public
         env:
