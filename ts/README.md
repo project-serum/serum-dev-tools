@@ -4,7 +4,7 @@ A developer tooling SDK for building on [serum-dex](https://github.com/project-s
 
 ## Prerequisites
 
-You will need to use the `FileKeypair` class that extends the (Keypair)[https://solana-labs.github.io/solana-web3.js/classes/Keypair.html] class from (@solana/web3.js)[https://npmjs.com/package/@solana/web3.js] to provide easy file-based keypair management, which is required for the market making features provided by this package.
+You will need to use the `FileKeypair` class that extends the [`Keypair`](https://solana-labs.github.io/solana-web3.js/classes/Keypair.html) class from [`@solana/web3.js`](https://npmjs.com/package/@solana/web3.js) to provide easy file-based keypair management, which is required for the market making features provided by this package.
 
 ```
 const owner = FileKeypair.generate("./scripts/keys/owner.json");
