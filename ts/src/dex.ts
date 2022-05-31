@@ -255,7 +255,7 @@ export class Dex {
     owner: FileKeypair,
     opts: MarketMakerOpts,
   ): ChildProcess {
-    const child = fork("./src/scripts/marketMaker", null, {
+    const child = fork(`${__dirname}/scripts/marketMaker`, null, {
       detached: true,
       stdio: ["pipe", 0, 0, "ipc"],
     });
