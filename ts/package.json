@@ -1,6 +1,6 @@
 {
   "name": "@project-serum/serum-dev-tools",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "developer tooling suite for building on serum",
   "repository": {
     "type": "git",
@@ -19,7 +19,8 @@
     "test": "ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts",
     "prepare": "cd .. && husky install ts/.husky",
     "lint": "eslint --fix",
-    "docs": "typedoc --entryPoints src/index.ts"
+    "docs": "typedoc --entryPoints src/index.ts",
+    "publish": "yarn build && npm publish"
   },
   "lint-staged": {
     "src/**/*.ts": [
