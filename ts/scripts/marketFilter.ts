@@ -62,6 +62,7 @@ const main = async () => {
     owner.keypair,
     market.serumMarket,
     "buy",
+    "postOnly",
     10,
     10,
   );
@@ -76,6 +77,7 @@ const main = async () => {
     const decoded = accountFlagsLayout().decode(bufferData);
     return decoded.initialized && decoded.market;
   };
+
   console.log(
     accounts.filter(marketFilter).map((acc) => acc.pubkey.toString()),
   );

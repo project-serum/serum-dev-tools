@@ -1,7 +1,7 @@
 import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { assert } from "chai";
-import { Coin, Dex, FileKeypair } from "../src";
+import { Coin, Dex, DexMarket, FileKeypair } from "../src";
 
 describe("Serum Dev Tools", () => {
   const connection = new Connection("http://localhost:8899", "confirmed");
@@ -12,6 +12,7 @@ describe("Serum Dev Tools", () => {
   );
 
   const dex = new Dex(dexAddress, connection);
+  let dexMarket: DexMarket;
 
   let baseCoin: Coin;
   let quoteCoin: Coin;
@@ -48,7 +49,7 @@ describe("Serum Dev Tools", () => {
   });
 
   it("can init dex market", async () => {
-    const dexMarket = await dex.initDexMarket(
+    dexMarket = await dex.initDexMarket(
       owner.keypair,
       dex.getCoin("SAYA"),
       dex.getCoin("SRM"),
@@ -75,5 +76,26 @@ describe("Serum Dev Tools", () => {
 
     assert.equal(baseBalance.value.uiAmount, 1e6);
     assert.equal(quoteBalance.value.uiAmount, 2e6);
+  });
+
+  it("can place orders", async () => {
+    await DexMarket.placeOrder(
+      connection,
+      owner.keypair,
+      dexMarket.serumMarket,
+      "buy",
+      "postOnly",
+      10,
+      10,
+    );
+
+    const orders = await dexMarket.serumMarket.loadOrdersForOwner(
+      connection,
+      owner.keypair.publicKey,
+    );
+
+    console.log(orders);
+
+    assert.equal(orders.length, 1);
   });
 });
