@@ -26,8 +26,10 @@ pub enum Command {
     Instance,
     /// Deploys the dex program to the specified cluster
     Deploy {
-        cluster: Option<Cluster>,
+        /// The cluster to deploy to
+        cluster: Cluster,
 
+        /// The script to run after deploying
         #[clap(long)]
         script: Option<String>,
     },

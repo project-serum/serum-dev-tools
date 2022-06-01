@@ -14,7 +14,7 @@ use crate::{
 
 pub fn deploy(
     cfg_override: &ConfigOverride,
-    cluster: Option<Cluster>,
+    cluster: Cluster,
     script: Option<String>,
 ) -> Result<()> {
     with_config(cfg_override, |cfg| {
@@ -22,7 +22,6 @@ pub fn deploy(
             return Err(DevToolError::NotInitialized.into());
         }
 
-        let cluster = cluster.unwrap();
         let cluster_url = cluster.url();
 
         let provider_keypair = cfg.provider.wallet.to_string();
