@@ -15,8 +15,8 @@ import { ChildProcess, fork } from "child_process";
 import { FileKeypair } from "./fileKeypair";
 
 /**
- * @param lotSize
- * @param tickSize
+ * @param lotSize This is the smallest representable amount of the base coin .
+ * @param tickSize  This is the smallest representable amount of the quote coin.
  * @param feeRate
  * @param quoteDustThreshold
  */
@@ -28,7 +28,6 @@ export type MarketParams = {
 };
 
 /**
- * @param unref
  * @param durationInSecs
  * @param orderCount
  * @param initialBidSize
@@ -36,7 +35,7 @@ export type MarketParams = {
  * @param quoteGeckoSymbol
  */
 type MarketMakerOpts = {
-  unref: boolean;
+  // unref: boolean;
   durationInSecs: number;
   orderCount: number;
   initialBidSize: number;
@@ -255,7 +254,12 @@ export class Dex {
     owner: FileKeypair,
     opts: MarketMakerOpts,
   ): ChildProcess {
+    if (opts.durationInSecs < 0)
+      throw new Error("Duration must be greater than 0.");
+
     const child = fork(`${__dirname}/scripts/marketMaker`, null, {
+      // https://nodejs.org/api/child_process.html#optionsdetached
+      // detached also doesn't seem to be making a difference.
       detached: true,
       stdio: ["pipe", 0, 0, "ipc"],
     });
@@ -264,8 +268,11 @@ export class Dex {
       `Process ${child.pid}: Running Market Maker for ${market.baseCoin.symbol}/${market.quoteCoin.symbol}. Note: No crank running`,
     );
 
-    // https://nodejs.org/api/child_process.html#optionsdetached
-    if (opts.unref) child.unref();
+    // unref doesn't seem to be making a difference for a forked process.
+    // but process is detached so parent can exit manually
+
+    // https://nodejs.org/api/child_process.html#subprocessunref
+    // if (opts.unref) child.unref;
 
     child.send({
       action: "start",
