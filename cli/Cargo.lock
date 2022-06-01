@@ -2443,7 +2443,7 @@ dependencies = [
 
 [[package]]
 name = "serum-dev-tools"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "anchor-client",
  "anyhow",
