@@ -153,6 +153,11 @@ const placeOrders = async (
 };
 
 const marketMaker = async (args) => {
+  setTimeout(() => {
+    console.log(`Exiting Market Maker @ ${process.pid}`);
+    process.exit(0);
+  }, Number.parseInt(args.duration));
+
   const connection = new Connection(args.rpcEndpoint, "confirmed");
 
   const serumMarket = await SerumMarket.load(
@@ -180,11 +185,4 @@ const marketMaker = async (args) => {
       quoteGeckoSymbol: args.quoteGeckoSymbol,
     });
   }, 10000);
-
-  if (Number.parseInt(args.duration) > 0) {
-    setTimeout(() => {
-      console.log(`Exiting Market Maker @ ${process.pid}`);
-      process.exit(0);
-    }, Number.parseInt(args.duration));
-  }
 };
