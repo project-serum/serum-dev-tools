@@ -94,8 +94,9 @@ describe("Serum Dev Tools", () => {
       owner.keypair.publicKey,
     );
 
-    console.log(orders);
-
     assert.equal(orders.length, 1);
+    assert.equal(orders[0].price, 10);
+    assert.equal(orders[0].size, 10);
+    assert.equal(orders[0].side, "buy");
   });
 });
