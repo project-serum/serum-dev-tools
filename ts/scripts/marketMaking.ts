@@ -5,6 +5,7 @@ import { Dex, FileKeypair } from "../src";
 process.on("beforeExit", () => console.log("Parent process exiting..."));
 
 const main = async () => {
+  console.log("Process: ", process.pid);
   const connection = new Connection("http://localhost:8899", "confirmed");
 
   const owner = FileKeypair.generate("./scripts/keys/owner.json");
@@ -53,8 +54,7 @@ const main = async () => {
   console.log(`Funded owner with ${baseCoin.symbol} and ${quoteCoin.symbol}`);
 
   dex.runMarketMaker(market, owner, {
-    unref: true,
-    durationInSecs: 30,
+    durationInSecs: 15,
     orderCount: 3,
     initialBidSize: 1000,
     baseGeckoSymbol: "solana",
