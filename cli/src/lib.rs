@@ -20,8 +20,11 @@ pub struct Opts {
 
 #[derive(Debug, Parser)]
 pub enum Command {
+    /// Initializes a dev-tools workspace
     Init,
+    /// Prints the address of the dex program
     Instance,
+    /// Deploys the dex program to the specified cluster
     Deploy {
         cluster: Option<Cluster>,
 
