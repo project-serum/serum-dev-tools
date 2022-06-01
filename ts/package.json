@@ -20,7 +20,7 @@
     "prepare": "cd .. && husky install ts/.husky",
     "lint": "eslint --fix",
     "docs": "typedoc --entryPoints src/index.ts",
-    "publish": "yarn build && npm publish"
+    "deploy": "yarn build && yarn test && npm publish"
   },
   "lint-staged": {
     "src/**/*.ts": [
