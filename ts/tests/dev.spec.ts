@@ -1,5 +1,4 @@
 import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import BN from "bn.js";
 import { assert } from "chai";
 import { Coin, Dex, DexMarket, FileKeypair } from "../src";
 
@@ -56,8 +55,6 @@ describe("Serum Dev Tools", () => {
       {
         lotSize: 1e-3,
         tickSize: 1e-2,
-        feeRate: 10,
-        quoteDustThreshold: new BN(100),
       },
     );
 
