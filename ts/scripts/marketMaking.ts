@@ -1,5 +1,4 @@
 import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import BN from "bn.js";
 import { Dex, FileKeypair } from "../src";
 
 process.on("beforeExit", () => console.log("Parent process exiting..."));
@@ -40,8 +39,6 @@ const main = async () => {
   const market = await dex.initDexMarket(owner.keypair, baseCoin, quoteCoin, {
     lotSize: 1e-3,
     tickSize: 1e-2,
-    feeRate: 10,
-    quoteDustThreshold: new BN(100),
   });
 
   console.log(

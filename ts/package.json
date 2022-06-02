@@ -1,6 +1,6 @@
 {
   "name": "@project-serum/serum-dev-tools",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "developer tooling suite for building on serum",
   "repository": {
     "type": "git",
@@ -20,7 +20,8 @@
     "prepare": "cd .. && husky install ts/.husky",
     "lint": "eslint --fix",
     "docs": "typedoc --entryPoints src/index.ts",
-    "deploy": "yarn build && yarn test && npm publish"
+    "deploy": "yarn build && yarn test && npm publish",
+    "deploy:no-test": "yarn build && npm publish"
   },
   "lint-staged": {
     "src/**/*.ts": [

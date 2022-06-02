@@ -17,22 +17,20 @@ import { FileKeypair } from "./fileKeypair";
 /**
  * @param lotSize This is the smallest representable amount of the base coin .
  * @param tickSize  This is the smallest representable amount of the quote coin.
- * @param feeRate
- * @param quoteDustThreshold
  */
 export type MarketParams = {
   lotSize: number;
   tickSize: number;
-  feeRate: number;
-  quoteDustThreshold: BN;
+  // feeRate: number;
+  // quoteDustThreshold: BN;
 };
 
 /**
- * @param durationInSecs
- * @param orderCount
- * @param initialBidSize
- * @param baseGeckoSymbol
- * @param quoteGeckoSymbol
+ * @param durationInSecs The duration in seconds for which the market maker will run.
+ * @param orderCount The number of orders to place per side in each iteration.
+ * @param initialBidSize The initial bid size for the market maker.
+ * @param baseGeckoSymbol The symbol used by CoinGecko for the base coin.
+ * @param quoteGeckoSymbol The symbol used by CoinGecko for the quote coin.
  */
 type MarketMakerOpts = {
   // unref: boolean;
@@ -209,8 +207,8 @@ export class Dex {
       quoteMint: quoteCoin.mint,
       baseLotSize: new BN(baseLotSize),
       quoteLotSize: new BN(quoteLotSize),
-      feeRateBps: marketParams.feeRate,
-      quoteDustThreshold: marketParams.quoteDustThreshold,
+      feeRateBps: 150, // Unused in v3
+      quoteDustThreshold: new BN(500), // Unused in v3
       vaultSignerNonce: vaultOwnerNonce,
       programId: this.address,
     });
