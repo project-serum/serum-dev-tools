@@ -32,7 +32,7 @@ export type MarketParams = {
  * @param baseGeckoSymbol The symbol used by CoinGecko for the base coin.
  * @param quoteGeckoSymbol The symbol used by CoinGecko for the quote coin.
  */
-type MarketMakerOpts = {
+export type MarketMakerOpts = {
   // unref: boolean;
   durationInSecs: number;
   orderCount: number;

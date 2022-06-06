@@ -38,15 +38,15 @@ export interface MarketAccounts {
  * A wrapper class around `serum-ts`'s `Market` class.
  */
 export class DexMarket {
-  public address: PublicKey;
+  private _address: PublicKey;
 
-  public serumMarket: Market;
+  private _serumMarket: Market;
 
-  public baseCoin: Coin;
+  private _baseCoin: Coin;
 
-  public quoteCoin: Coin;
+  private _quoteCoin: Coin;
 
-  public marketSymbol: string;
+  private _marketSymbol: string;
 
   constructor(
     address: PublicKey,
@@ -54,11 +54,31 @@ export class DexMarket {
     baseCoin: Coin,
     quoteCoin: Coin,
   ) {
-    this.address = address;
-    this.serumMarket = serumMarket;
-    this.baseCoin = baseCoin;
-    this.quoteCoin = quoteCoin;
-    this.marketSymbol = `${baseCoin.symbol}/${quoteCoin.symbol}`;
+    this._address = address;
+    this._serumMarket = serumMarket;
+    this._baseCoin = baseCoin;
+    this._quoteCoin = quoteCoin;
+    this._marketSymbol = `${baseCoin.symbol}/${quoteCoin.symbol}`;
+  }
+
+  public get address() {
+    return this._address;
+  }
+
+  public get serumMarket() {
+    return this._serumMarket;
+  }
+
+  public get baseCoin() {
+    return this._baseCoin;
+  }
+
+  public get quoteCoin() {
+    return this._quoteCoin;
+  }
+
+  public get marketSymbol() {
+    return this._marketSymbol;
   }
 
   /**
@@ -425,6 +445,19 @@ export class DexMarket {
     await connection.confirmTransaction(txSig, "confirmed");
 
     return txSig;
+  }
+
+  static async getOrdersForOwner(
+    owner: Keypair,
+    serumMarket: SerumMarket,
+    connection: Connection,
+  ): Promise<Order[]> {
+    const orders = await serumMarket.loadOrdersForOwner(
+      connection,
+      owner.publicKey,
+    );
+
+    return orders;
   }
 
   static async getOrCreateOpenOrderAccount(
