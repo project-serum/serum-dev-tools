@@ -6,12 +6,12 @@ A developer tooling SDK for building on [serum-dex](https://github.com/project-s
 
 You will need to use the `FileKeypair` class that extends the [`Keypair`](https://solana-labs.github.io/solana-web3.js/classes/Keypair.html) class from [`@solana/web3.js`](https://npmjs.com/package/@solana/web3.js) to provide easy file-based keypair management, which is required for the market making features provided by this package.
 
-```
+```javascript
 const owner = FileKeypair.generate("./scripts/keys/owner.json");
 
 const airdropSig = await connection.requestAirdrop(
-    owner.keypair.publicKey,
-    10 * LAMPORTS_PER_SOL,
+  owner.keypair.publicKey,
+  10 * LAMPORTS_PER_SOL,
 );
 await connection.confirmTransaction(airdropSig);
 ```
@@ -26,13 +26,17 @@ You can either,
 
 ## Get Started
 
+```
+yarn add @project-serum/serum-dev-tools
+```
+
 ### Initialize a `Dex`
 
-```
+```javascript
 const connection = new Connection("http://localhost:8899", "confirmed");
 
 const dexAddress = new PublicKey(
-    "7zo7HCQAZPRb4pYiQQ6fLjC8ssN3E8LkavVs8JUA5NMn"
+  "7zo7HCQAZPRb4pYiQQ6fLjC8ssN3E8LkavVs8JUA5NMn",
 );
 
 const dex = new Dex(dexAddress, connection);
@@ -40,21 +44,21 @@ const dex = new Dex(dexAddress, connection);
 
 ### Create `Coin` instances for your `Market`
 
-```
+```javascript
 const baseCoin = await dex.createCoin(
-    "SAYA",
-    9,
-    owner.keypair,
-    owner.keypair,
-    owner.keypair,
+  "SAYA",
+  9,
+  owner.keypair,
+  owner.keypair,
+  owner.keypair,
 );
 
 const quoteCoin = await dex.createCoin(
-    "SRM",
-    9,
-    owner.keypair,
-    owner.keypair,
-    owner.keypair,
+  "SRM",
+  9,
+  owner.keypair,
+  owner.keypair,
+  owner.keypair,
 );
 
 // Fund the FileKeypair object to place orders.
@@ -62,35 +66,25 @@ const quoteCoin = await dex.createCoin(
 await baseCoin.fundAccount(1000000, owner.keypair, connection);
 
 await quoteCoin.fundAccount(2000000, owner.keypair, connection);
-
 ```
 
 ### Initialize a `Market`
 
-```
-const market = await dex.initDexMarket(
-    owner.keypair,
-    baseCoin,
-    quoteCoin,
-    {
-        lotSize: 1e-3,
-        tickSize: 1e-2,
-    }
-);
+```javascript
+const market = await dex.initDexMarket(owner.keypair, baseCoin, quoteCoin, {
+  lotSize: 1e-3,
+  tickSize: 1e-2,
+});
 ```
 
 ### Run a Market Maker
 
-```
-dex.runMarketMaker(
-    market,
-    owner,
-    {
-        durationInSecs: 30,
-        orderCount: 3,
-        initialBidSize: 1000,
-        baseGeckoSymbol: "solana",
-        quoteGeckoSymbol: "usd",
-    }
-);
+```javascript
+dex.runMarketMaker(market, owner, {
+  durationInSecs: 30,
+  orderCount: 3,
+  initialBidSize: 1000,
+  baseGeckoSymbol: "solana",
+  quoteGeckoSymbol: "usd",
+});
 ```
