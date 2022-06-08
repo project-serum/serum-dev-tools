@@ -15,7 +15,7 @@ use crate::{
 pub fn deploy(
     cfg_override: &ConfigOverride,
     cluster: Cluster,
-    script: Option<String>,
+    command: Option<String>,
 ) -> Result<()> {
     with_config(cfg_override, |cfg| {
         if !is_initialized() {
@@ -51,10 +51,10 @@ pub fn deploy(
 
         println!("Deploy Successful");
 
-        if script.is_some() {
+        if command.is_some() {
             let script_exit = std::process::Command::new("bash")
                 .arg("-c")
-                .arg(script.unwrap())
+                .arg(command.unwrap())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .output()

@@ -32,6 +32,13 @@ export class Coin {
     this.freezeAuthority = freezeAuthority;
   }
 
+  /**
+   * Get the token balance for the specified owner.
+   *
+   * @param owner The `Keypair` whose balance to fetch.
+   * @param connection The `Connection` object to connect to Solana.
+   * @returns
+   */
   public async getBalance(
     owner: Keypair,
     connection: Connection,
@@ -53,6 +60,13 @@ export class Coin {
     return tokenAmount;
   }
 
+  /**
+   * Fund the owner key-pair with the specified amount of this coin.
+   *
+   * @param decimalAmount The amount of tokens to fund account with, in decimal notation.
+   * @param owner The `Keypair` to fund.
+   * @param connection The `Connection` object to connect to Solana.
+   */
   public async fundAccount(
     decimalAmount: number,
     owner: Keypair,

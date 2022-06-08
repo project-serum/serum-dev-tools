@@ -1,11 +1,14 @@
 import { Keypair } from "@solana/web3.js";
 import fs from "fs";
 
+/**
+ * A wrapper class around @solana/web3.js `Keypair` that allows persisting key-pairs in your local filesystem.
+ */
 export class FileKeypair {
   public filePath: string;
   public keypair: Keypair;
 
-  constructor(filePath: string, keypair: Keypair) {
+  private constructor(filePath: string, keypair: Keypair) {
     this.filePath = filePath;
     this.keypair = keypair;
   }

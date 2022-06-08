@@ -48,7 +48,7 @@ export class DexMarket {
 
   private _marketSymbol: string;
 
-  constructor(
+  private constructor(
     address: PublicKey,
     serumMarket: Market,
     baseCoin: Coin,
@@ -273,7 +273,7 @@ export class DexMarket {
    * Create a `Transaction` object for placing an order.
    *
    * @param connection The `Connection` object to connect to Solana.
-   * @param owner The `PublicKey` of the owner of the order.
+   * @param owner The `Keypair` of the owner of the order.
    * @param serumMarket The `Market` object from `serum-ts` package.
    * @param side The `Side` of the order.
    * @param orderType The `OrderType` of the order.
@@ -359,7 +359,7 @@ export class DexMarket {
    * Place an order on the DexMarket.
    *
    * @param connection The `Connection` object to connect to Solana.
-   * @param owner The `PublicKey` of the owner of the order.
+   * @param owner The `Keypair` of the owner of the order.
    * @param serumMarket The `Market` object from `serum-ts` package.
    * @param side The `Side` of the order.
    * @param orderType The `OrderType` of the order.
@@ -396,7 +396,7 @@ export class DexMarket {
    * Create a `Transaction` object for cancelling an order.
    *
    * @param connection The `Connection` object to connect to Solana.
-   * @param owner The `PublicKey` of the owner of the order.
+   * @param owner The `Keypair` of the owner of the order.
    * @param serumMarket The `Market` object from `serum-ts` package.
    * @param order The `Order` object to cancel.
    * @returns
@@ -447,6 +447,14 @@ export class DexMarket {
     return txSig;
   }
 
+  /**
+   * Get all orders placed by a keypair.
+   *
+   * @param owner The `Keypair` for which orders have to be fetched.
+   * @param serumMarket The `Market` object from `serum-ts` package.
+   * @param connection The `Connection` object to connect to Solana.
+   * @returns
+   */
   static async getOrdersForOwner(
     owner: Keypair,
     serumMarket: SerumMarket,
@@ -460,6 +468,14 @@ export class DexMarket {
     return orders;
   }
 
+  /**
+   * Get or create an OpenOrder account for the specified owner.
+   *
+   * @param owner The `Keypair` for which OpenOrders account is required.
+   * @param serumMarket The `Market` object from `serum-ts` package.
+   * @param connection The `Connection` object to connect to Solana.
+   * @returns
+   */
   static async getOrCreateOpenOrderAccount(
     owner: Keypair,
     serumMarket: SerumMarket,

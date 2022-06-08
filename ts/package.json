@@ -1,6 +1,6 @@
 {
   "name": "@project-serum/serum-dev-tools",
-  "version": "0.0.6",
+  "version": "1.0.0",
   "description": "developer tooling suite for building on serum",
   "repository": {
     "type": "git",
@@ -10,6 +10,14 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "author": "Sayantan Karmakar",
+  "keywords": [
+    "solana",
+    "serum",
+    "developer",
+    "tools",
+    "serum-dex",
+    "project-serum"
+  ],
   "license": "MIT",
   "files": [
     "dist"

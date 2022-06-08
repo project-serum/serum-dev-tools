@@ -75,8 +75,6 @@ const market = await dex.initDexMarket(
     {
         lotSize: 1e-3,
         tickSize: 1e-2,
-        feeRate: 10,
-        quoteDustThreshold: new BN(100),
     }
 );
 ```
@@ -88,7 +86,6 @@ dex.runMarketMaker(
     market,
     owner,
     {
-        unref: true,
         durationInSecs: 30,
         orderCount: 3,
         initialBidSize: 1000,

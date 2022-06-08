@@ -29,9 +29,9 @@ pub enum Command {
         /// The cluster to deploy to
         cluster: Cluster,
 
-        /// The script to run after deploying
+        /// The command to run after deploying
         #[clap(long)]
-        script: Option<String>,
+        command: Option<String>,
     },
 }
 
@@ -39,8 +39,8 @@ pub fn entry(opts: Opts) -> Result<()> {
     match opts.command {
         Command::Init => commands::init(),
         Command::Instance => commands::instance(),
-        Command::Deploy { cluster, script } => {
-            commands::deploy(&opts.cfg_override, cluster, script)
+        Command::Deploy { cluster, command } => {
+            commands::deploy(&opts.cfg_override, cluster, command)
         }
     }
 }
