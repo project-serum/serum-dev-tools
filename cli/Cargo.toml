@@ -1,13 +1,13 @@
 [package]
 name = "serum-dev-tools"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 authors = ["Sayantan Karmakar <sayantankarmakar@outlook.com>"]
 homepage = "https://github.com/project-serum/serum-dev-tools"
 repository = "https://github.com/project-serum/serum-dev-tools"
 description = "Developer Tooling Suite for building on Serum Dex"
 license = "Apache-2.0"
-keywords = ["solana", "project-serum", "serum-dex", "developer", "tools", "dex"]
+keywords = ["solana", "project-serum", "serum-dex", "developer", "tools"]
 
 [[bin]]
 name = "serum-dev-tools"
