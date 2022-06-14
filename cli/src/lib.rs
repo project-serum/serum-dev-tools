@@ -9,7 +9,10 @@ mod errors;
 mod path;
 mod utils;
 
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[derive(Parser, Debug)]
+#[clap(version = VERSION)]
 pub struct Opts {
     #[clap(flatten)]
     pub cfg_override: ConfigOverride,
