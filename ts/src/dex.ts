@@ -71,23 +71,29 @@ export class Dex {
    * @param symbol The symbol of the coin to create
    * @param decimals The decimals of the coin to create
    * @param payer The payer `Keypair` to use for the transactions
-   * @param mintAuthority The mint authority `Keypair` to use for the mint
-   * @param freezeAuthority The freeze authority `Keypair` to use for the mint
+   * @param mintAuthority The optional mint authority `Keypair` to use for the mint
+   * @param freezeAuthority The optionals freeze authority `Keypair` to use for the mint
+   * @param keypair The optional keypair for the Mint to be created, defaults to a random one
    * @returns
    */
   public createCoin = async (
     symbol: string,
     decimals: number,
     payer: Keypair,
-    mintAuthority: Keypair | null,
+    mintAuthority: Keypair,
     freezeAuthority: Keypair | null,
+    keypair?: Keypair,
   ): Promise<Coin> => {
     const mint = await createMint(
       this.connection,
       payer,
-      mintAuthority ? mintAuthority.publicKey : null,
+      mintAuthority.publicKey,
       freezeAuthority ? freezeAuthority.publicKey : null,
       decimals,
+      keypair,
+      {
+        commitment: "confirmed",
+      },
     );
 
     const coin = new Coin(
@@ -260,7 +266,7 @@ export class Dex {
     if (opts.durationInSecs < 0)
       throw new Error("Duration must be greater than 0.");
 
-    const child = fork(`${__dirname}/scripts/marketMaker`, null, {
+    const child = fork(`${__dirname}/scripts/marketMaker`, {
       // https://nodejs.org/api/child_process.html#optionsdetached
       // detached also doesn't seem to be making a difference.
       detached: true,
@@ -303,7 +309,7 @@ export class Dex {
     if (opts.durationInSecs < 0)
       throw new Error("Duration must be greater than 0.");
 
-    const child = fork(`${__dirname}/scripts/cranker`, null, {
+    const child = fork(`${__dirname}/scripts/cranker`, {
       // https://nodejs.org/api/child_process.html#optionsdetached
       // detached also doesn't seem to be making a difference.
       detached: true,

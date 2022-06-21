@@ -1,4 +1,8 @@
-import { getOrCreateAssociatedTokenAccount, mintTo } from "@solana/spl-token";
+import {
+  getMint,
+  getOrCreateAssociatedTokenAccount,
+  mintTo,
+} from "@solana/spl-token";
 import {
   Connection,
   Keypair,
@@ -16,20 +20,56 @@ export class Coin {
 
   mintAuthority: Keypair;
 
-  freezeAuthority: Keypair;
+  freezeAuthority: Keypair | null;
 
   constructor(
     symbol: string,
     decimals: number,
     mint: PublicKey,
     mintAuthority: Keypair,
-    freezeAuthority: Keypair,
+    freezeAuthority: Keypair | null,
   ) {
     this.symbol = symbol;
     this.decimals = decimals;
     this.mint = mint;
     this.mintAuthority = mintAuthority;
     this.freezeAuthority = freezeAuthority;
+  }
+
+  static async load(
+    connection: Connection,
+    symbol: string,
+    mint: PublicKey,
+    mintAuthority: Keypair,
+    freezeAuthority: Keypair | null,
+  ): Promise<Coin> {
+    const {
+      decimals,
+      mintAuthority: tokenMintAuthority,
+      freezeAuthority: tokenFreezeAuthority,
+    } = await getMint(connection, mint, "confirmed");
+
+    // tokenMintAuthority has to be truthy since createMint requires a mint authority as well.
+    if (
+      !tokenMintAuthority ||
+      tokenMintAuthority.toBase58() !== mintAuthority.publicKey.toBase58()
+    ) {
+      throw new Error("Invalid Mint authority provided");
+    }
+
+    if (!!tokenFreezeAuthority !== !!freezeAuthority) {
+      throw new Error("Invalid Freeze authority provided");
+    }
+
+    if (
+      tokenFreezeAuthority &&
+      freezeAuthority &&
+      tokenFreezeAuthority.toBase58() !== freezeAuthority.publicKey.toBase58()
+    ) {
+      throw new Error("Invalid Freeze authority provided");
+    }
+
+    return new Coin(symbol, decimals, mint, mintAuthority, freezeAuthority);
   }
 
   /**
@@ -72,6 +112,10 @@ export class Coin {
     owner: Keypair,
     connection: Connection,
   ): Promise<void> {
+    if (!this.mintAuthority) {
+      throw new Error("Coin has no mint authority");
+    }
+
     const destination = await getOrCreateAssociatedTokenAccount(
       connection,
       owner,
