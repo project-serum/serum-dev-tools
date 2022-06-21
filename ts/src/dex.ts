@@ -41,6 +41,11 @@ export type MarketMakerOpts = {
   quoteGeckoSymbol: string;
 };
 
+export type CrankOpts = {
+  durationInSecs: number;
+  verbose: boolean;
+};
+
 /**
  * Dex is a wrapper class for a deployed Serum Dex program.
  */
@@ -263,7 +268,7 @@ export class Dex {
     });
 
     console.log(
-      `Process ${child.pid}: Running Market Maker for ${market.baseCoin.symbol}/${market.quoteCoin.symbol}. Note: No crank running`,
+      `Process ${child.pid}: Running Market Maker for ${market.baseCoin.symbol}/${market.quoteCoin.symbol}.`,
     );
 
     // unref doesn't seem to be making a difference for a forked process.
@@ -284,6 +289,40 @@ export class Dex {
         initialBidSize: opts.initialBidSize,
         baseGeckoSymbol: opts.baseGeckoSymbol,
         quoteGeckoSymbol: opts.quoteGeckoSymbol,
+      },
+    });
+
+    return child;
+  }
+
+  public runCrank(
+    market: DexMarket,
+    owner: FileKeypair,
+    opts: CrankOpts,
+  ): ChildProcess {
+    if (opts.durationInSecs < 0)
+      throw new Error("Duration must be greater than 0.");
+
+    const child = fork(`${__dirname}/scripts/cranker`, null, {
+      // https://nodejs.org/api/child_process.html#optionsdetached
+      // detached also doesn't seem to be making a difference.
+      detached: true,
+      stdio: ["pipe", 0, 0, "ipc"],
+    });
+
+    console.log(
+      `Process ${child.pid}: Running Crank for ${market.baseCoin.symbol}/${market.quoteCoin.symbol}.`,
+    );
+
+    child.send({
+      action: "start",
+      args: {
+        marketAddress: market.address.toString(),
+        programID: this.address.toString(),
+        rpcEndpoint: this.connection.rpcEndpoint,
+        ownerFilePath: owner.filePath,
+        duration: opts.durationInSecs * 1000,
+        verbose: opts.verbose ? "true" : "false",
       },
     });
 

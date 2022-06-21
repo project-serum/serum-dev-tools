@@ -19,7 +19,7 @@ import {
 import { Market as SerumMarket } from "@project-serum/serum";
 import { Coin } from "./coin";
 import { getDecimalCount, withAssociatedTokenAccount } from "./utils";
-import { OrderType, TransactionWithSigners } from "./types";
+import { OrderType, SelfTradeBehaviour, TransactionWithSigners } from "./types";
 
 const REQUEST_QUEUE_SIZE = 5120 + 12; // https://github.com/mithraiclabs/psyoptions/blob/f0c9f73408a27676e0c7f156f5cae71f73f59c3f/programs/psy_american/src/lib.rs#L1003
 const EVENT_QUEUE_SIZE = 262144 + 12; // https://github.com/mithraiclabs/psyoptions-ts/blob/ba1888ea83e634e1c7a8dad820fe67d053cf3f5c/packages/psy-american/src/instructions/initializeSerumMarket.ts#L84
@@ -289,6 +289,7 @@ export class DexMarket {
     orderType: OrderType,
     size: number,
     price: number,
+    selfTradeBehaviour?: SelfTradeBehaviour,
   ): Promise<TransactionWithSigners> {
     try {
       DexMarket.sanityCheck(serumMarket, price, size);
@@ -335,6 +336,7 @@ export class DexMarket {
       orderType,
       feeDiscountPubkey: null,
       openOrdersAddressKey: openOrders.address,
+      selfTradeBehavior: selfTradeBehaviour,
     };
 
     const { transaction: placeOrderTx, signers: placeOrderSigners } =
