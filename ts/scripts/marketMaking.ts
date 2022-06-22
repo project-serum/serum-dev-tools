@@ -51,11 +51,16 @@ const main = async () => {
   console.log(`Funded owner with ${baseCoin.symbol} and ${quoteCoin.symbol}`);
 
   dex.runMarketMaker(market, owner, {
-    durationInSecs: 15,
+    durationInSecs: 30,
     orderCount: 3,
     initialBidSize: 1000,
     baseGeckoSymbol: "solana",
     quoteGeckoSymbol: "usd",
+  });
+
+  dex.runCrank(market, owner, {
+    durationInSecs: 20,
+    verbose: true,
   });
 };
 

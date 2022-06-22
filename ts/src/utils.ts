@@ -77,3 +77,13 @@ export function roundToDecimal(
 ) {
   return decimals ? Math.round(value * 10 ** decimals) / 10 ** decimals : value;
 }
+
+export function logIfVerbose(message: string, isVerbose: boolean) {
+  if (isVerbose) {
+    console.log(message);
+  }
+}
+
+export function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

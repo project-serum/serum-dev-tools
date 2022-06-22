@@ -10,12 +10,7 @@ import { FileKeypair } from "../fileKeypair";
 import { DexMarket } from "../market";
 import axios from "axios";
 import { getDecimalCount, roundToDecimal } from "../utils";
-
-type MessageType = {
-  action: "start";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args: any;
-};
+import { MessageType } from "../types";
 
 process.on("message", async (message: MessageType) => {
   if (message.action === "start") {
@@ -121,6 +116,7 @@ const placeOrders = async (
         "postOnly",
         buySize,
         buyPrice,
+        "decrementTake",
       );
     tx.add(buyTransaction);
     signersArray.push(buySigners);
@@ -136,6 +132,7 @@ const placeOrders = async (
         "postOnly",
         sellSize,
         sellPrice,
+        "decrementTake",
       );
     tx.add(sellTransaction);
     signersArray.push(sellSigners);
@@ -169,7 +166,7 @@ const marketMaker = async (args) => {
 
   const owner = FileKeypair.load(args.ownerFilePath);
 
-  placeOrders(owner.keypair, serumMarket, connection, {
+  await placeOrders(owner.keypair, serumMarket, connection, {
     orderCount: Number.parseInt(args.orderCount),
     initialBidSize: Number.parseInt(args.initialBidSize),
     baseGeckoSymbol: args.baseGeckoSymbol,

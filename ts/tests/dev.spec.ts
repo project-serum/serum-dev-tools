@@ -48,15 +48,10 @@ describe("Serum Dev Tools", () => {
   });
 
   it("can init dex market", async () => {
-    dexMarket = await dex.initDexMarket(
-      owner.keypair,
-      dex.getCoin("SAYA"),
-      dex.getCoin("SRM"),
-      {
-        lotSize: 1e-3,
-        tickSize: 1e-2,
-      },
-    );
+    dexMarket = await dex.initDexMarket(owner.keypair, baseCoin, quoteCoin, {
+      lotSize: 1e-3,
+      tickSize: 1e-2,
+    });
 
     assert.equal(
       dexMarket.address.toBase58(),
@@ -95,5 +90,42 @@ describe("Serum Dev Tools", () => {
     assert.equal(orders[0].price, 10);
     assert.equal(orders[0].size, 10);
     assert.equal(orders[0].side, "buy");
+  });
+
+  it("can load coins", async () => {
+    const tempCoin = await dex.createCoin(
+      "test",
+      9,
+      owner.keypair,
+      owner.keypair,
+      null,
+    );
+
+    const loadedCoin = await Coin.load(
+      connection,
+      "test",
+      tempCoin.mint,
+      owner.keypair,
+      null,
+    );
+
+    assert.ok(tempCoin.isEqual(loadedCoin));
+    assert.deepEqual(tempCoin, loadedCoin);
+  });
+
+  it("invalid freeze authority while load coins", async () => {
+    const tempCoin = await dex.createCoin(
+      "test",
+      9,
+      owner.keypair,
+      owner.keypair,
+      owner.keypair,
+    );
+
+    try {
+      await Coin.load(connection, "test", tempCoin.mint, owner.keypair, null);
+    } catch (err) {
+      assert.ok(true);
+    }
   });
 });

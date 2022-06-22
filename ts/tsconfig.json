@@ -4,6 +4,7 @@
     "rootDir": ".",
     "typeRoots": ["./node_modules/@types"],
     "types": ["mocha", "chai", "node"],
+    "strictNullChecks": true
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", "**/*.test.ts"],
   "exclude": ["node_modules", "dist"],

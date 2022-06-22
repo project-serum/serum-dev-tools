@@ -41,23 +41,44 @@ export type MarketMakerOpts = {
   quoteGeckoSymbol: string;
 };
 
+export type CrankOpts = {
+  durationInSecs: number;
+  verbose: boolean;
+};
+
 /**
  * Dex is a wrapper class for a deployed Serum Dex program.
  */
 export class Dex {
-  public address: PublicKey;
+  private _address: PublicKey;
 
-  coins: Coin[];
+  private _coins: Coin[];
 
-  markets: DexMarket[];
+  private _markets: DexMarket[];
 
-  connection: Connection;
+  private _connection: Connection;
 
   constructor(address: PublicKey, connection: Connection) {
-    this.address = address;
-    this.connection = connection;
-    this.coins = [];
-    this.markets = [];
+    this._address = address;
+    this._connection = connection;
+    this._coins = [];
+    this._markets = [];
+  }
+
+  public get coins() {
+    return this._coins;
+  }
+
+  public get markets() {
+    return this._markets;
+  }
+
+  public get connection() {
+    return this._connection;
+  }
+
+  public get address() {
+    return this._address;
   }
 
   /**
@@ -66,23 +87,29 @@ export class Dex {
    * @param symbol The symbol of the coin to create
    * @param decimals The decimals of the coin to create
    * @param payer The payer `Keypair` to use for the transactions
-   * @param mintAuthority The mint authority `Keypair` to use for the mint
-   * @param freezeAuthority The freeze authority `Keypair` to use for the mint
+   * @param mintAuthority The optional mint authority `Keypair` to use for the mint
+   * @param freezeAuthority The optionals freeze authority `Keypair` to use for the mint
+   * @param keypair The optional keypair for the Mint to be created, defaults to a random one
    * @returns
    */
   public createCoin = async (
     symbol: string,
     decimals: number,
     payer: Keypair,
-    mintAuthority: Keypair | null,
+    mintAuthority: Keypair,
     freezeAuthority: Keypair | null,
+    keypair?: Keypair,
   ): Promise<Coin> => {
     const mint = await createMint(
       this.connection,
       payer,
-      mintAuthority ? mintAuthority.publicKey : null,
+      mintAuthority.publicKey,
       freezeAuthority ? freezeAuthority.publicKey : null,
       decimals,
+      keypair,
+      {
+        commitment: "confirmed",
+      },
     );
 
     const coin = new Coin(
@@ -255,7 +282,7 @@ export class Dex {
     if (opts.durationInSecs < 0)
       throw new Error("Duration must be greater than 0.");
 
-    const child = fork(`${__dirname}/scripts/marketMaker`, null, {
+    const child = fork(`${__dirname}/scripts/marketMaker`, {
       // https://nodejs.org/api/child_process.html#optionsdetached
       // detached also doesn't seem to be making a difference.
       detached: true,
@@ -263,7 +290,7 @@ export class Dex {
     });
 
     console.log(
-      `Process ${child.pid}: Running Market Maker for ${market.baseCoin.symbol}/${market.quoteCoin.symbol}. Note: No crank running`,
+      `Process ${child.pid}: Running Market Maker for ${market.baseCoin.symbol}/${market.quoteCoin.symbol}.`,
     );
 
     // unref doesn't seem to be making a difference for a forked process.
@@ -284,6 +311,48 @@ export class Dex {
         initialBidSize: opts.initialBidSize,
         baseGeckoSymbol: opts.baseGeckoSymbol,
         quoteGeckoSymbol: opts.quoteGeckoSymbol,
+      },
+    });
+
+    return child;
+  }
+
+  /**
+   * Runs a crank on a separate node process for the given `DexMarket` for specified duration.
+   *
+   * @param market The `DexMarket` to run a crank for
+   * @param owner The owner `FileKeypair` consuming events.
+   * @param opts The crank options used
+   * @returns
+   */
+  public runCrank(
+    market: DexMarket,
+    owner: FileKeypair,
+    opts: CrankOpts,
+  ): ChildProcess {
+    if (opts.durationInSecs < 0)
+      throw new Error("Duration must be greater than 0.");
+
+    const child = fork(`${__dirname}/scripts/cranker`, {
+      // https://nodejs.org/api/child_process.html#optionsdetached
+      // detached also doesn't seem to be making a difference.
+      detached: true,
+      stdio: ["pipe", 0, 0, "ipc"],
+    });
+
+    console.log(
+      `Process ${child.pid}: Running Crank for ${market.baseCoin.symbol}/${market.quoteCoin.symbol}.`,
+    );
+
+    child.send({
+      action: "start",
+      args: {
+        marketAddress: market.address.toString(),
+        programID: this.address.toString(),
+        rpcEndpoint: this.connection.rpcEndpoint,
+        ownerFilePath: owner.filePath,
+        duration: opts.durationInSecs * 1000,
+        verbose: opts.verbose ? "true" : "false",
       },
     });
 
