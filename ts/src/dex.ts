@@ -50,19 +50,35 @@ export type CrankOpts = {
  * Dex is a wrapper class for a deployed Serum Dex program.
  */
 export class Dex {
-  public address: PublicKey;
+  private _address: PublicKey;
 
-  coins: Coin[];
+  private _coins: Coin[];
 
-  markets: DexMarket[];
+  private _markets: DexMarket[];
 
-  connection: Connection;
+  private _connection: Connection;
 
   constructor(address: PublicKey, connection: Connection) {
-    this.address = address;
-    this.connection = connection;
-    this.coins = [];
-    this.markets = [];
+    this._address = address;
+    this._connection = connection;
+    this._coins = [];
+    this._markets = [];
+  }
+
+  public get coins() {
+    return this._coins;
+  }
+
+  public get markets() {
+    return this._markets;
+  }
+
+  public get connection() {
+    return this._connection;
+  }
+
+  public get address() {
+    return this._address;
   }
 
   /**
@@ -301,6 +317,14 @@ export class Dex {
     return child;
   }
 
+  /**
+   * Runs a crank on a separate node process for the given `DexMarket` for specified duration.
+   *
+   * @param market The `DexMarket` to run a crank for
+   * @param owner The owner `FileKeypair` consuming events.
+   * @param opts The crank options used
+   * @returns
+   */
   public runCrank(
     market: DexMarket,
     owner: FileKeypair,

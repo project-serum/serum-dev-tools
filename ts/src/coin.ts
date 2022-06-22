@@ -12,15 +12,15 @@ import {
 } from "@solana/web3.js";
 
 export class Coin {
-  symbol: string;
+  private _symbol: string;
 
-  decimals: number;
+  private _decimals: number;
 
-  mint: PublicKey;
+  private _mint: PublicKey;
 
-  mintAuthority: Keypair;
+  private _mintAuthority: Keypair;
 
-  freezeAuthority: Keypair | null;
+  private _freezeAuthority: Keypair | null;
 
   constructor(
     symbol: string,
@@ -29,13 +29,43 @@ export class Coin {
     mintAuthority: Keypair,
     freezeAuthority: Keypair | null,
   ) {
-    this.symbol = symbol;
-    this.decimals = decimals;
-    this.mint = mint;
-    this.mintAuthority = mintAuthority;
-    this.freezeAuthority = freezeAuthority;
+    this._symbol = symbol;
+    this._decimals = decimals;
+    this._mint = mint;
+    this._mintAuthority = mintAuthority;
+    this._freezeAuthority = freezeAuthority;
   }
 
+  public get symbol() {
+    return this._symbol;
+  }
+
+  public get decimals() {
+    return this._decimals;
+  }
+
+  public get mint() {
+    return this._mint;
+  }
+
+  public get mintAuthority() {
+    return this._mintAuthority;
+  }
+
+  public get freezeAuthority() {
+    return this._freezeAuthority;
+  }
+
+  /**
+   * Load an exisiting mint as a Coin.
+   *
+   * @param connection The `Connection` object to connect to Solana.
+   * @param symbol The symbol to assign to the coin.
+   * @param mint The `PublicKey` of the Mint for the coin.
+   * @param mintAuthority The minting authority `Keypair` for the coin.
+   * @param freezeAuthority The optional freezing authority `Keypair` for the coin.
+   * @returns
+   */
   static async load(
     connection: Connection,
     symbol: string,
@@ -70,6 +100,42 @@ export class Coin {
     }
 
     return new Coin(symbol, decimals, mint, mintAuthority, freezeAuthority);
+  }
+
+  /**
+   * Equality check between two `Coin`s.
+   *
+   * @param to The `Coin` object to compare to.
+   * @returns
+   */
+  public isEqual(to: Coin) {
+    const { mintAuthority, freezeAuthority } = to;
+
+    if (
+      mintAuthority.publicKey.toBase58() !==
+      this.mintAuthority.publicKey.toBase58()
+    ) {
+      return false;
+    }
+
+    if (!!freezeAuthority !== !!this.freezeAuthority) {
+      return false;
+    }
+
+    if (
+      freezeAuthority &&
+      this.freezeAuthority &&
+      freezeAuthority.publicKey.toBase58() !==
+        this.freezeAuthority.publicKey.toBase58()
+    ) {
+      return false;
+    }
+
+    return (
+      to.symbol === this.symbol &&
+      to.decimals === this.decimals &&
+      to.mint.toBase58() === this.mint.toBase58()
+    );
   }
 
   /**

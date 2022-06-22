@@ -88,3 +88,12 @@ dex.runMarketMaker(market, owner, {
   quoteGeckoSymbol: "usd",
 });
 ```
+
+### Run a crank
+
+```javascript
+dex.runCrank(market, owner, {
+  durationInSecs: 20,
+  verbose: true,
+});
+```

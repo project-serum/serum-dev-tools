@@ -103,13 +103,14 @@ describe("Serum Dev Tools", () => {
 
     const loadedCoin = await Coin.load(
       connection,
-      "test-2",
+      "test",
       tempCoin.mint,
       owner.keypair,
       null,
     );
 
-    assert.equal(tempCoin.decimals, loadedCoin.decimals);
+    assert.ok(tempCoin.isEqual(loadedCoin));
+    assert.deepEqual(tempCoin, loadedCoin);
   });
 
   it("invalid freeze authority while load coins", async () => {
