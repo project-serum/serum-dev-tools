@@ -7,7 +7,7 @@ const main = async () => {
   console.log("Process: ", process.pid);
   const connection = new Connection("http://localhost:8899", "confirmed");
 
-  const owner = FileKeypair.generate("./scripts/keys/owner.json");
+  const owner = FileKeypair.loadOrGenerate("./scripts/keys/owner.json");
   console.log("Owner: ", owner.keypair.publicKey.toString());
 
   const airdropSig = await connection.requestAirdrop(
