@@ -9,7 +9,7 @@ import { Market as SerumMarket } from "@project-serum/serum";
 import { FileKeypair } from "../fileKeypair";
 import { DexMarket } from "../market";
 import axios from "axios";
-import { getDecimalCount, roundToDecimal } from "../utils";
+import { delay, getDecimalCount, logIfVerbose, roundToDecimal } from "../utils";
 import { MessageType } from "../types";
 
 process.on("message", async (message: MessageType) => {
@@ -31,6 +31,7 @@ const cancelOrders = async (
   owner: Keypair,
   serumMarket: SerumMarket,
   connection: Connection,
+  isVerbose: boolean,
 ) => {
   const orders = await serumMarket.loadOrdersForOwner(
     connection,
@@ -57,7 +58,10 @@ const cancelOrders = async (
 
   await connection.confirmTransaction(txSig, "confirmed");
 
-  console.log(`----- ${orders.length} CancelOrders Confirmed -----`);
+  logIfVerbose(
+    `----- ${orders.length} CancelOrders Confirmed -----`,
+    isVerbose,
+  );
 };
 
 const placeOrders = async (
@@ -69,6 +73,7 @@ const placeOrders = async (
     initialBidSize: number;
     baseGeckoSymbol: string;
     quoteGeckoSymbol: string;
+    isVerbose: boolean;
   },
 ) => {
   let midPrice: number;
@@ -79,7 +84,7 @@ const placeOrders = async (
     process.exit(1);
   }
 
-  console.log("Mid price:", midPrice);
+  logIfVerbose(`Mid price: ${midPrice}`, opts.isVerbose);
 
   const { orderCount, initialBidSize } = opts;
 
@@ -121,7 +126,10 @@ const placeOrders = async (
     tx.add(buyTransaction);
     signersArray.push(buySigners);
 
-    console.log(`Bid placed with price ${buyPrice} and size ${buySize}`);
+    logIfVerbose(
+      `Bid placed with price ${buyPrice} and size ${buySize}`,
+      opts.isVerbose,
+    );
 
     const { transaction: sellTransaction, signers: sellSigners } =
       await DexMarket.getPlaceOrderTransaction(
@@ -137,7 +145,10 @@ const placeOrders = async (
     tx.add(sellTransaction);
     signersArray.push(sellSigners);
 
-    console.log(`Ask placed with price ${sellPrice} and size ${sellSize}`);
+    logIfVerbose(
+      `Ask placed with price ${sellPrice} and size ${sellSize}`,
+      opts.isVerbose,
+    );
   }
 
   const signersUnion: Signer[] = [...new Set(signersArray.flat())];
@@ -146,7 +157,10 @@ const placeOrders = async (
 
   await connection.confirmTransaction(txSig, "confirmed");
 
-  console.log(`----- ${orderCount * 2} PlaceOrders Confirmed -----`);
+  logIfVerbose(
+    `----- ${orderCount * 2} PlaceOrders Confirmed -----`,
+    opts.isVerbose,
+  );
 };
 
 const marketMaker = async (args) => {
@@ -155,6 +169,9 @@ const marketMaker = async (args) => {
     process.exit(0);
   }, Number.parseInt(args.duration));
 
+  const isVerbose = args.verbose === "true";
+
+  const owner = FileKeypair.load(args.ownerFilePath);
   const connection = new Connection(args.rpcEndpoint, "confirmed");
 
   const serumMarket = await SerumMarket.load(
@@ -164,22 +181,16 @@ const marketMaker = async (args) => {
     new PublicKey(args.programID),
   );
 
-  const owner = FileKeypair.load(args.ownerFilePath);
-
-  await placeOrders(owner.keypair, serumMarket, connection, {
-    orderCount: Number.parseInt(args.orderCount),
-    initialBidSize: Number.parseInt(args.initialBidSize),
-    baseGeckoSymbol: args.baseGeckoSymbol,
-    quoteGeckoSymbol: args.quoteGeckoSymbol,
-  });
-
-  setInterval(async () => {
-    await cancelOrders(owner.keypair, serumMarket, connection);
+  do {
     await placeOrders(owner.keypair, serumMarket, connection, {
       orderCount: Number.parseInt(args.orderCount),
       initialBidSize: Number.parseInt(args.initialBidSize),
       baseGeckoSymbol: args.baseGeckoSymbol,
       quoteGeckoSymbol: args.quoteGeckoSymbol,
+      isVerbose,
     });
-  }, 10000);
+    await delay(10000);
+    await cancelOrders(owner.keypair, serumMarket, connection, isVerbose);
+    // eslint-disable-next-line no-constant-condition
+  } while (true);
 };

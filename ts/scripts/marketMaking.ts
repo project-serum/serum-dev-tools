@@ -56,6 +56,7 @@ const main = async () => {
     initialBidSize: 1000,
     baseGeckoSymbol: "solana",
     quoteGeckoSymbol: "usd",
+    verbose: false,
   });
 
   dex.runCrank(market, owner, {

@@ -31,6 +31,7 @@ export type MarketParams = {
  * @param initialBidSize The initial bid size for the market maker.
  * @param baseGeckoSymbol The symbol used by CoinGecko for the base coin.
  * @param quoteGeckoSymbol The symbol used by CoinGecko for the quote coin.
+ * @param verbose The boolean flag determining whether to log about the actions taking place.
  */
 export type MarketMakerOpts = {
   // unref: boolean;
@@ -39,8 +40,13 @@ export type MarketMakerOpts = {
   initialBidSize: number;
   baseGeckoSymbol: string;
   quoteGeckoSymbol: string;
+  verbose: boolean;
 };
 
+/**
+ * @param durationInSecs The duration in seconds for which the market maker will run.
+ * @param verbose The boolean flag determining whether to log about the actions taking place.
+ */
 export type CrankOpts = {
   durationInSecs: number;
   verbose: boolean;
@@ -311,6 +317,7 @@ export class Dex {
         initialBidSize: opts.initialBidSize,
         baseGeckoSymbol: opts.baseGeckoSymbol,
         quoteGeckoSymbol: opts.quoteGeckoSymbol,
+        verbose: opts.verbose ? "true" : "false",
       },
     });
 
