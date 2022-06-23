@@ -22,7 +22,7 @@ export class Coin {
 
   private _freezeAuthority: Keypair | null;
 
-  constructor(
+  private constructor(
     symbol: string,
     decimals: number,
     mint: PublicKey,
@@ -178,10 +178,6 @@ export class Coin {
     owner: Keypair,
     connection: Connection,
   ): Promise<void> {
-    if (!this.mintAuthority) {
-      throw new Error("Coin has no mint authority");
-    }
-
     const destination = await getOrCreateAssociatedTokenAccount(
       connection,
       owner,

@@ -33,7 +33,6 @@ const crank = async (
     try {
       const sig = await connection.sendTransaction(tx, [owner]);
       await connection.confirmTransaction(sig, "confirmed");
-      logIfVerbose(`ConsumeEvents: ${sig}`, isVerbose);
       logIfVerbose(`------ ConsumeEvents Confirmed ------`, isVerbose);
     } catch (err) {
       logIfVerbose(`Error: ${err}`, isVerbose);
@@ -60,11 +59,9 @@ const basicCranker = async (args) => {
     new PublicKey(args.programID),
   );
 
-  await crank(serumMarket, owner.keypair, connection, isVerbose);
-
   do {
-    await delay(2000);
     await crank(serumMarket, owner.keypair, connection, isVerbose);
+    await delay(2000);
     // eslint-disable-next-line no-constant-condition
   } while (true);
 };

@@ -279,6 +279,7 @@ export class DexMarket {
    * @param orderType The `OrderType` of the order.
    * @param size The `size` of the order.
    * @param price The `price` of the order.
+   * @param selfTradeBehaviour The `SelfTradeBehaviour` action to follow for the order placed.
    * @returns
    */
   static async getPlaceOrderTransaction(
@@ -367,6 +368,7 @@ export class DexMarket {
    * @param orderType The `OrderType` of the order.
    * @param size The `size` of the order.
    * @param price The `price` of the order.
+   * @param selfTradeBehaviour The `SelfTradeBehaviour` action to follow for the order placed.
    * @returns
    */
   static async placeOrder(
@@ -377,6 +379,7 @@ export class DexMarket {
     orderType: OrderType,
     size: number,
     price: number,
+    selfTradeBehaviour?: SelfTradeBehaviour,
   ): Promise<string> {
     const { transaction, signers } = await DexMarket.getPlaceOrderTransaction(
       connection,
@@ -386,6 +389,7 @@ export class DexMarket {
       orderType,
       size,
       price,
+      selfTradeBehaviour,
     );
 
     const txSig = await connection.sendTransaction(transaction, signers);

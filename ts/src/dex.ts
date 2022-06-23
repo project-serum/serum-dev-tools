@@ -118,9 +118,9 @@ export class Dex {
       },
     );
 
-    const coin = new Coin(
+    const coin = await Coin.load(
+      this.connection,
       symbol,
-      decimals,
       mint,
       mintAuthority,
       freezeAuthority,
